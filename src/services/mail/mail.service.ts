@@ -20,11 +20,11 @@ export class MailService {
     }
 
     async sendVerificationEmail(email: string, token: string, name: string) {
-        const url = `${process.env.API_URL}/v1/auth/verify-email?token=${token}`;
+      const url = `${process.env.API_URL}/v1/auth/verify-email?token=${token}&email=${email}`;
         const info = await this.transporter.sendMail({
             from: `"InterLux" <${process.env.EMAIL_USER}>`,
             to: email,
-            subject: '[InteriorLux] Verify Your Email Now',
+          subject: '[InterLux] Verify Your Email Now',
             html: this.renderHtml(name, url),
         });
 
@@ -203,7 +203,7 @@ export class MailService {
     </head>
     <body>
       <div class="main">
-        <img src="https://i.postimg.cc/TYHrV1jF/Frame-55.png" alt="LUMA Logo" class="main-logo">
+        <img src="https://mir-s3-cdn-cf.behance.net/project_modules/max_1200/0d41d240723243.578a950f65386.png" alt="Logo" class="main-logo">
         <h1>Xin chào, ${context.name}!</h1>
         <p>${context?.title}</p>
         <p>${context?.desc}</p>

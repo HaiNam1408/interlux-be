@@ -1,6 +1,8 @@
 import {
+    BadRequestException,
     HttpException,
     HttpStatus,
+    Inject,
     Injectable,
     UnauthorizedException,
 } from '@nestjs/common';
@@ -11,14 +13,21 @@ import { LoginDto } from './dto/login.dto';
 import { PrismaService } from 'src/prisma.service';
 import { MailService } from 'src/services/mail/mail.service';
 import { randomBytes } from 'crypto';
+import { CACHE_MANAGER } from '@nestjs/cache-manager';
+import { Cache } from 'cache-manager';
+import { CacheService } from 'src/services/cache/cache.service';
 
 @Injectable()
 export class AuthService {
     constructor(
         private prisma: PrismaService,
         private jwtService: JwtService,
-        private mailService: MailService
-    ) { }
+        private mailService: MailService,
+        @Inject(CACHE_MANAGER) private cacheService: Cache
+    ) {
+        // console.log('Cache Store: ', cacheService.stores);
+        console.log("Cache Manager Instance:", this.cacheService);
+    }
 
     // Tạo Access Token & Refresh Token
     private async generateTokens(userId: string, email: string) {
@@ -45,42 +54,62 @@ export class AuthService {
         return { accessToken, refreshToken };
     }
 
-    // Đăng ký tài khoản
-    async register(dto: RegisterDto) {
-        const hashedPassword = await bcrypt.hash(dto.password, 10);
-        const verificationToken = randomBytes(32).toString('hex');
-
-        const user = await this.prisma.user.create({
-            data: {
-                username: dto.username,
-                email: dto.email,
-                phone: dto.phone,
-                password: hashedPassword,
-                verificationToken,
-            },
-        });
-
-        await this.mailService.sendVerificationEmail(user.email, verificationToken, user.username);
+    async test() {
+        console.log('===> START CACHE');
+        let abc = await this.cacheService.get('abc');
+        if (!abc) {
+            await this.cacheService.set(`abc`, 'Hello');
+            console.log('--------------> RECACHE');
+            return abc;
+        }
+        console.log('===> END CACHE');
+        return abc;
     }
 
-    async verifyEmail(token: string) {
-        const user = await this.prisma.user.findFirst({
-            where: { verificationToken: token },
-        });
-
-        if (!user) {
-            throw new HttpException('Token invalid!', HttpStatus.BAD_REQUEST);
+    async register(dto: RegisterDto) {
+        const user = await this.prisma.user.findUnique({ where: { email: dto.email } })
+        if (user) {
+            throw new HttpException("User already exists!", HttpStatus.BAD_REQUEST);
         }
 
-        await this.prisma.user.update({
-            where: { id: user.id },
-            data: { isVerified: true, verificationToken: null },
-        });
+        const existingCache = await this.cacheService.get(`register:${dto.email}`);
+        if (existingCache) {
+            throw new BadRequestException('Email has already been registered. Please check your email to verify.');
+        }
 
-        return { message: 'Verify email successfully!' };
+        const hashedPassword = await bcrypt.hash(dto.password, 10);
+        const verifyToken = randomBytes(32).toString('hex');
+
+        await this.cacheService.set(
+            `register:${dto.email}`,
+            JSON.stringify({ ...dto, password: hashedPassword, verifyToken }),
+            5 * 60 * 1000
+        );
+
+        await this.mailService.sendVerificationEmail(dto.email, verifyToken, dto.username);
     }
 
-    // Đăng nhập
+
+    async verifyEmail(token: string, email: string) {
+        const cachedUser: string = await this.cacheService.get(`register:${email}`);
+        if (!cachedUser) {
+            throw new HttpException("Token invalid or expired!", HttpStatus.BAD_REQUEST);
+        }
+
+        const cacheData = JSON.parse(cachedUser);
+        const { verifyToken, ...userData } = cacheData;
+        if (verifyToken !== token) {
+            throw new HttpException("Token invalid!", HttpStatus.BAD_REQUEST);
+        }
+
+        await this.prisma.user.create({ data: userData });
+        await this.cacheService.del(`register:${email}`);
+
+        let a = await this.cacheService.stores;
+        console.log(a);
+    }
+
+    // Login
     async login(dto: LoginDto) {
         const user = await this.prisma.user.findUnique({
             where: { email: dto.email },
@@ -88,10 +117,6 @@ export class AuthService {
 
         if (!user) {
             throw new UnauthorizedException('Invalid credentials');
-        }
-
-        if (!user.isVerified) {
-            throw new HttpException('Your account is not verified!', HttpStatus.FORBIDDEN);
         }
 
         const isPasswordValid = await bcrypt.compare(dto.password, user.password);
