@@ -3,6 +3,7 @@ import { AppModule } from './app.module';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import {
   ClassSerializerInterceptor,
+  ValidationPipe,
   VersioningType,
 } from "@nestjs/common";
 import * as cookieParser from "cookie-parser";
@@ -14,6 +15,11 @@ import * as bodyParser from "body-parser";
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   app.use(cookieParser());
+  app.useGlobalPipes(
+    new ValidationPipe({
+      transform: true,
+    }),
+  );
   const reflector = app.get(Reflector);
   app.useGlobalInterceptors(new ClassSerializerInterceptor(reflector));
   app.enableCors();
@@ -22,12 +28,13 @@ async function bootstrap() {
     defaultVersion: "1",
   });
   app.useStaticAssets(join(__dirname, '..', 'public'));
+  app.setBaseViewsDir(join(__dirname, '..', 'views'));
   app.setViewEngine('ejs');
   const configService = app.get(ConfigService);
   const config = new DocumentBuilder()
     .addBearerAuth()
     .setTitle("Interior Ecommerce API")
-    .setDescription("The nterior Ecommerce API description")
+    .setDescription("The Interior Ecommerce API description")
     .setVersion("1.0")
     .addTag("Interior Ecommerce")
     .build();

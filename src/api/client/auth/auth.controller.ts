@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpException, HttpStatus, Post, Query, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Get, HttpException, HttpStatus, Post, Query, Res, UseInterceptors } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
@@ -6,6 +6,9 @@ import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import ApiResponse from 'src/global/api.ressponse';
 import { CacheInterceptor } from '@nestjs/cache-manager';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+import { Response } from 'express';
 
 @ApiBearerAuth()
 @ApiTags("auth")
@@ -87,4 +90,41 @@ export class AuthController {
                 : new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
+
+    @Post('forgot-password')
+    async forgotPassword(@Body() dto: ForgotPasswordDto) {
+        try {
+            await this.authService.forgotPassword(dto);
+            return new ApiResponse("Please check your email to reset password", HttpStatus.OK);
+        } catch (error) {
+            throw error instanceof HttpException
+                ? error
+                : new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @Get('change-password')
+    async checkToken(@Query('token') token: string, @Query('email') email: string, @Res() res: Response) {
+        try {
+            const html = await this.authService.changePasswordPage(token, email);
+            res.send(html);
+        } catch (error) {
+            throw error instanceof HttpException
+                ? error
+                : new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @Post('reset-password')
+    async resetPassword(@Body() body: ResetPasswordDto, @Res() res: Response) {
+        try {
+            const html = await this.authService.resetPassword(body);
+            res.send(html);
+        } catch (error) {
+            throw error instanceof HttpException
+                ? error
+                : new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
 }

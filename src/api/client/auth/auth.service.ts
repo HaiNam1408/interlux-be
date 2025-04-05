@@ -15,7 +15,9 @@ import { MailService } from 'src/services/mail/mail.service';
 import { randomBytes } from 'crypto';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Cache } from 'cache-manager';
-import { CacheService } from 'src/services/cache/cache.service';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+import { renderTemplate } from 'src/utils/template.util';
 
 @Injectable()
 export class AuthService {
@@ -24,10 +26,7 @@ export class AuthService {
         private jwtService: JwtService,
         private mailService: MailService,
         @Inject(CACHE_MANAGER) private cacheService: Cache
-    ) {
-        // console.log('Cache Store: ', cacheService.stores);
-        console.log("Cache Manager Instance:", this.cacheService);
-    }
+    ) { }
 
     // Tạo Access Token & Refresh Token
     private async generateTokens(userId: string, email: string) {
@@ -104,9 +103,6 @@ export class AuthService {
 
         await this.prisma.user.create({ data: userData });
         await this.cacheService.del(`register:${email}`);
-
-        let a = await this.cacheService.stores;
-        console.log(a);
     }
 
     // Login
@@ -156,4 +152,94 @@ export class AuthService {
             data: { refreshToken: null },
         });
     }
+
+    // Forgot Password
+    async forgotPassword(dto: ForgotPasswordDto) {
+        const user = await this.prisma.user.findUnique({ where: { email: dto.email } });
+        if (!user) {
+            throw new BadRequestException('Email does not exist');
+        }
+
+        const cacheKey = `reset-password:${dto.email}`;
+        const existingToken = await this.cacheService.get(cacheKey);
+
+        if (existingToken) {
+            throw new BadRequestException('A reset password request was recently made. Please try again later.');
+        }
+
+        const resetToken = randomBytes(3).toString('hex').toUpperCase();
+        await this.cacheService.set(cacheKey, resetToken, 3 * 60 * 1000);
+
+        await this.mailService.sendForgotPasswordEmail(dto.email, resetToken, user.username);
+    }
+
+    // Reset Password Page
+    async changePasswordPage(token: string, email: string) {
+        try {
+            const user = await this.prisma.user.findUnique({ where: { email } });
+            if (!user) {
+                throw new BadRequestException('Email does not exist');
+            }
+
+            const cacheKey = `reset-password:${email}`;
+            const resetToken = await this.cacheService.get(cacheKey);
+
+            if (!resetToken) {
+                throw new BadRequestException('Reset token is invalid or has expired.');
+            }
+
+            if (resetToken !== token) {
+                throw new BadRequestException('Reset token is invalid.');
+            }
+
+            const data = { token, email };
+            const html = await renderTemplate('reset-password.ejs', data);
+
+            return html;
+        } catch (error) {
+            const html = await renderTemplate('reset-password.ejs', {
+                error: error.message || 'An unexpected error occurred'
+            });
+            return html;
+        }
+    }
+
+    // Reset Password
+    async resetPassword(dto: ResetPasswordDto) {
+        try {
+            const user = await this.prisma.user.findUnique({ where: { email: dto.email } });
+            if (!user) {
+                throw new BadRequestException('Email does not exist');
+            }
+
+            const cacheKey = `reset-password:${dto.email}`;
+            const resetToken = await this.cacheService.get(cacheKey);
+
+            if (!resetToken) {
+                throw new BadRequestException('Reset token is invalid or has expired.');
+            }
+
+            if (resetToken !== dto.token) {
+                throw new BadRequestException('Reset token is invalid.');
+            }
+
+            const hashedPassword = await bcrypt.hash(dto.newPassword, 10);
+            await this.prisma.user.update({
+                where: { email: dto.email },
+                data: { password: hashedPassword },
+            });
+
+            const html = await renderTemplate('reset-password.ejs', {
+                success: 'Password reset successfully, you can now log in with your new password.'
+            });
+
+            return html;
+        } catch (error) {
+            const html = await renderTemplate('reset-password.ejs', {
+                error: error.message || 'An unexpected error occurred'
+            });
+            return html;
+        }
+    }
+
 }
