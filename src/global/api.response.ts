@@ -3,18 +3,18 @@ import { HttpStatus } from "@nestjs/common";
 export interface ApiResponseInterface {
     statusCode: HttpStatus;
     message: string;
-    data?: any;
+    result?: any;
 }
 
 class ApiResponse<T> implements ApiResponseInterface {
     statusCode: HttpStatus;
     message: string;
-    data?: T;
+    result?: T;
 
     constructor(message: string, statusCode: HttpStatus, data?: T) {
         this.message = message;
         this.statusCode = statusCode;
-        this.data = data;
+        this.result = data;
         return this;
     }
 

@@ -25,10 +25,10 @@ export class AuthGuard implements CanActivate {
         }
         try {
             const payload = await this.jwtService.verifyAsync(token, {
-                secret: process.env.JWT_SECRET_KEY,
+                secret: process.env.JWT_SECRET,
             });
             const exited = await this.prisma.user.findUnique({
-                where: { id: payload.id },
+                where: { email: payload.email },
             });
 
             if (!exited) {
@@ -40,7 +40,7 @@ export class AuthGuard implements CanActivate {
                 throw new UnauthorizedException("AccessToken Expired");
             }
             request["user"] = payload;
-        } catch {
+        } catch (err) {
             throw new UnauthorizedException();
         }
         return true;

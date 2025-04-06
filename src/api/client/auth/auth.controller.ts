@@ -4,7 +4,7 @@ import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import ApiResponse from 'src/global/api.ressponse';
+import ApiResponse from 'src/global/api.response';
 import { CacheInterceptor } from '@nestjs/cache-manager';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';

@@ -28,10 +28,10 @@ export class AuthService {
         @Inject(CACHE_MANAGER) private cacheService: Cache
     ) { }
 
-    // Tạo Access Token & Refresh Token
-    private async generateTokens(userId: string, email: string) {
+    // Generate Access Token & Refresh Token
+    private async generateTokens(userId: string, email: string, role: string) {
         const accessToken = this.jwtService.sign(
-            { userId, email },
+            { userId, email, role },
             {
                 secret: process.env.JWT_SECRET,
                 expiresIn: process.env.EXPIRES_ACCESS_TOKEN,
@@ -120,16 +120,14 @@ export class AuthService {
             throw new UnauthorizedException('Invalid credentials');
         }
 
-        return this.generateTokens(user.id.toString(), user.email);
+        return this.generateTokens(user.id.toString(), user.email, user.role);
     }
 
     // Refresh Token
     async refreshToken(refreshToken: string): Promise<any> {
         const decodeReToken: any = await this.jwtService.verifyAsync(
             refreshToken,
-            {
-                secret: process.env.JWT_SECRET_KEY,
-            },
+            { secret: process.env.JWT_SECRET },
         );
 
         const user = await this.prisma.user.findUnique({
@@ -140,7 +138,7 @@ export class AuthService {
             throw new UnauthorizedException('Invalid refresh token');
         }
 
-        const token = this.generateTokens(user.id.toString(), user.email);
+        const token = this.generateTokens(user.id.toString(), user.email, user.role);
 
         return token;
     }
