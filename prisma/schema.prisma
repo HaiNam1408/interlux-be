@@ -8,29 +8,118 @@ datasource db {
 }
 
 model User {
-  id                    Int      @id @default(autoincrement())
-  username              String   
-  email                 String   @unique
-  phone                 String
-  password              String
-  avatar                String?  
-  address               String?  
-  role                  Role     @default(USER)
-  refreshToken          String?
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  id           Int      @id @default(autoincrement())
+  username     String
+  email        String   @unique
+  phone        String
+  password     String
+  avatar       String?
+  address      String?
+  role         Role     @default(USER)
+  refreshToken String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 model Category {
-  id        Int      @id @default(autoincrement())
-  name      String   @unique
-  slug      String   @unique
+  id        Int        @id @default(autoincrement())
+  name      String     @unique
+  slug      String     @unique
   sort      Int?
   parentId  Int?
-  parent    Category? @relation("CategoryParent", fields: [parentId], references: [id])
+  parent    Category?  @relation("CategoryParent", fields: [parentId], references: [id])
   children  Category[] @relation("CategoryParent")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  
+  Product   Product[]
+}
+
+model Product {
+  id          Int           @id @default(autoincrement())
+  title       String
+  slug        String        @unique
+  description String?
+  price       Float
+  percentOff  Int?
+  sold        Int           @default(0)
+  attributes  Json?
+  categoryId  Int
+  category    Category      @relation(fields: [categoryId], references: [id])
+  images      Json?
+  sort        Int?
+  status      ProductStatus @default(DRAFT)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  variations ProductVariation[]
+}
+
+model Variation {
+  id          Int          @id @default(autoincrement())
+  name        String
+  slug        String       @unique
+  description String?
+  sort        Int?
+  status      CommonStatus @default(ACTIVE)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  options VariationOption[]
+}
+
+model VariationOption {
+  id          Int          @id @default(autoincrement())
+  name        String
+  slug        String       @unique
+  value       String?
+  variationId Int
+  variation   Variation    @relation(fields: [variationId], references: [id])
+  sort        Int?
+  status      CommonStatus @default(ACTIVE)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  productVariations ProductVariationOption[]
+}
+
+model ProductVariation {
+  id        Int          @id @default(autoincrement())
+  productId Int
+  product   Product      @relation(fields: [productId], references: [id])
+  sku       String       @unique
+  price     Float?
+  salePrice Float?
+  inventory Int          @default(0)
+  images    Json?
+  isDefault Boolean      @default(false)
+  status    CommonStatus @default(ACTIVE)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  options ProductVariationOption[]
+}
+
+model ProductVariationOption {
+  id                 Int              @id @default(autoincrement())
+  productVariationId Int
+  productVariation   ProductVariation @relation(fields: [productVariationId], references: [id], onDelete: Cascade)
+  variationOptionId  Int
+  variationOption    VariationOption  @relation(fields: [variationOptionId], references: [id])
+
+  @@unique([productVariationId, variationOptionId])
+}
+
+enum ProductStatus {
+  DRAFT
+  ACTIVE
+  INACTIVE
+  OUTOFSTOCK
+}
+
+enum CommonStatus {
+  ACTIVE
+  INACTIVE
 }
 
 enum Role {
