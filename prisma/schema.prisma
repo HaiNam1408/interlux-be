@@ -31,8 +31,8 @@ model Category {
   children  Category[] @relation("CategoryParent")
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
-  
-  Product   Product[]
+
+  Product Product[]
 }
 
 model Product {
@@ -56,14 +56,13 @@ model Product {
 }
 
 model Variation {
-  id          Int          @id @default(autoincrement())
-  name        String
-  slug        String       @unique
-  description String?
-  sort        Int?
-  status      CommonStatus @default(ACTIVE)
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  id        Int          @id @default(autoincrement())
+  name      String
+  slug      String       @unique
+  sort      Int?
+  status    CommonStatus @default(ACTIVE)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
 
   options VariationOption[]
 }
@@ -84,18 +83,18 @@ model VariationOption {
 }
 
 model ProductVariation {
-  id        Int          @id @default(autoincrement())
-  productId Int
-  product   Product      @relation(fields: [productId], references: [id])
-  sku       String       @unique
-  price     Float?
-  salePrice Float?
-  inventory Int          @default(0)
-  images    Json?
-  isDefault Boolean      @default(false)
-  status    CommonStatus @default(ACTIVE)
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
+  id         Int          @id @default(autoincrement())
+  productId  Int
+  product    Product      @relation(fields: [productId], references: [id])
+  sku        String       @unique
+  price      Float?
+  percentOff Int?
+  inventory  Int          @default(0)
+  images     Json?
+  isDefault  Boolean      @default(false)
+  status     CommonStatus @default(ACTIVE)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
 
   options ProductVariationOption[]
 }
