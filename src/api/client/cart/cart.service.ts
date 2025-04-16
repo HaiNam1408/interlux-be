@@ -1,4 +1,3 @@
-// api/client/cart/cart.service.ts
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../../prisma.service';
 import { AddToCartDto, UpdateCartItemDto } from './dto';

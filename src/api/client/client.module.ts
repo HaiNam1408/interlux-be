@@ -9,6 +9,10 @@ import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from 'src/prisma.service';
 import { OrderModule } from './order/order.module';
 import { OrderController } from './order/order.controller';
+import { PaymentModule } from './payment/payment.module';
+import { PaymentController } from './payment/payment.controller';
+import { CouponModule } from './coupon/coupon.module';
+import { CouponController } from './coupon/coupon.controller';
 
 @Module({
     imports: [
@@ -16,6 +20,8 @@ import { OrderController } from './order/order.controller';
         CategoryModule,
         CartModule,
         OrderModule,
+        PaymentModule,
+        CouponModule,
     ],
     providers: [
         JwtService,
@@ -25,7 +31,9 @@ import { OrderController } from './order/order.controller';
         AuthController, 
         CategoryController,
         CartController,
-        OrderController
+        OrderController,
+        CouponController,
+        PaymentController,
     ],
 })
 export class ClientModule { }
