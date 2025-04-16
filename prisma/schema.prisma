@@ -19,6 +19,9 @@ model User {
   refreshToken String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+
+  carts        Cart[]
+  orders       Order[]
 }
 
 model Category {
@@ -52,7 +55,9 @@ model Product {
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
-  variations ProductVariation[]
+  variations  ProductVariation[]
+  cartItems   CartItem[]
+  orderItems  OrderItem[]
 }
 
 model Variation {
@@ -96,7 +101,9 @@ model ProductVariation {
   createdAt  DateTime     @default(now())
   updatedAt  DateTime     @updatedAt
 
-  options ProductVariationOption[]
+  options            ProductVariationOption[]
+  cartItems          CartItem[]
+  orderItems         OrderItem[]
 }
 
 model ProductVariationOption {
@@ -107,6 +114,130 @@ model ProductVariationOption {
   variationOption    VariationOption  @relation(fields: [variationOptionId], references: [id])
 
   @@unique([productVariationId, variationOptionId])
+}
+
+model Cart {
+  id        Int       @id @default(autoincrement())
+  userId    Int
+  user      User      @relation(fields: [userId], references: [id])
+  items     CartItem[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([userId])
+}
+
+model CartItem {
+  id                 Int              @id @default(autoincrement())
+  cartId             Int
+  cart               Cart             @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId          Int
+  product            Product          @relation(fields: [productId], references: [id])
+  productVariationId Int?
+  productVariation   ProductVariation? @relation(fields: [productVariationId], references: [id])
+  quantity           Int
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  @@index([cartId])
+  @@index([productId])
+  @@index([productVariationId])
+}
+
+model Order {
+  id                Int           @id @default(autoincrement())
+  orderNumber       String        @unique
+  userId            Int
+  user              User          @relation(fields: [userId], references: [id])
+  items             OrderItem[]
+  subtotal          Float
+  shippingFee       Float         @default(0)
+  tax               Float         @default(0)
+  discount          Float         @default(0)
+  total             Float
+  paymentId         Int?
+  payment           Payment?      @relation(fields: [paymentId], references: [id])
+  shippingId        Int?
+  shipping          Shipping?     @relation(fields: [shippingId], references: [id])
+  couponId          Int?
+  coupon            Coupon?       @relation(fields: [couponId], references: [id])
+  status            OrderStatus   @default(PENDING)
+  note              String?
+  shippingAddress   Json
+  billingAddress    Json?
+  deliveryDate      DateTime?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  @@index([userId])
+  @@index([paymentId])
+  @@index([shippingId])
+  @@index([couponId])
+}
+
+model OrderItem {
+  id                 Int              @id @default(autoincrement())
+  orderId            Int
+  order              Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId          Int
+  product            Product          @relation(fields: [productId], references: [id])
+  productVariationId Int?
+  productVariation   ProductVariation? @relation(fields: [productVariationId], references: [id])
+  quantity           Int
+  price              Float
+  discount           Float            @default(0)
+  total              Float
+  metadata           Json?            // Lưu thông tin sản phẩm tại thời điểm đặt hàng
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  @@index([orderId])
+  @@index([productId])
+  @@index([productVariationId])
+}
+
+model Payment {
+  id                Int             @id @default(autoincrement())
+  transactionId     String?         @unique
+  amount            Float
+  currency          String          @default("VND")
+  method            PaymentMethod
+  status            PaymentStatus   @default(PENDING)
+  metadata          Json?           // Lưu thông tin thanh toán từ cổng thanh toán
+  orders            Order[]
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+}
+
+model Shipping {
+  id              Int               @id @default(autoincrement())
+  name            String            // Tên phương thức vận chuyển
+  description     String?
+  price           Float
+  estimatedDays   Int?              // Thời gian dự kiến giao hàng (số ngày)
+  provider        String?           // Nhà cung cấp dịch vụ vận chuyển
+  status          CommonStatus      @default(ACTIVE)
+  trackingInfo    Json?             // Thông tin theo dõi đơn hàng
+  orders          Order[]
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+}
+
+model Coupon {
+  id              Int               @id @default(autoincrement())
+  code            String            @unique
+  type            CouponType        
+  value           Float             
+  minPurchase     Float?            
+  maxUsage        Int?              
+  usageCount      Int               @default(0)
+  startDate       DateTime
+  endDate         DateTime
+  status          CommonStatus      @default(ACTIVE)
+  orders          Order[]
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+	@@map("Coupon")
 }
 
 enum ProductStatus {
@@ -124,4 +255,40 @@ enum CommonStatus {
 enum Role {
   USER
   ADMIN
+}
+
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  CONFIRMED
+  SHIPPED
+  DELIVERED
+  COMPLETED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  BANK_TRANSFER
+  CREDIT_CARD
+  MOMO
+  VNPAY
+  PAYPAL
+  COD
+  OTHER
+}
+
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  REFUNDED
+  CANCELLED
+}
+
+enum CouponType {
+  PERCENTAGE
+  FIXED_AMOUNT
 }

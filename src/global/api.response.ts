@@ -18,6 +18,10 @@ class ApiResponse<T> implements ApiResponseInterface {
         return this;
     }
 
+    static success<T>(data: T, message: string = "Operation successful"): ApiResponse<T> {
+        return new ApiResponse<T>(message, HttpStatus.OK, data);
+    }
+
     static fromError(error: any): ApiResponse<any> {
         let errorMessage: string;
         let statusCode: HttpStatus;
