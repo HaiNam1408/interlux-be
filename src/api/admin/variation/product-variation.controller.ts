@@ -1,0 +1,135 @@
+import {
+    Controller,
+    Get,
+    Post,
+    Body,
+    Patch,
+    Param,
+    Delete,
+    Query,
+    ParseIntPipe,
+    HttpStatus,
+    UseInterceptors,
+    UploadedFiles,
+} from '@nestjs/common';
+import { ProductVariationService } from './product-variation.service';
+import { ApiBearerAuth, ApiBody, ApiConsumes, ApiTags } from '@nestjs/swagger';
+import { CreateProductVariationDto, UpdateProductVariationDto } from './dto';
+import ApiResponse from 'src/global/api.response';
+import { resError } from 'src/global/handleError.global';
+import { FilesInterceptor } from '@nestjs/platform-express';
+
+@ApiBearerAuth()
+@ApiTags('product-variation')
+@Controller('product/:productId/variation')
+export class ProductVariationController {
+    constructor(private readonly productVariationService: ProductVariationService) { }
+
+    @ApiConsumes('multipart/form-data')
+    @ApiBody({
+        description: "Create Product Variation",
+        type: CreateProductVariationDto,
+    })
+    @UseInterceptors(FilesInterceptor("images", 6))
+    @Post()
+    async create(
+        @Param('productId', ParseIntPipe) productId: number,
+        @Body() createProductVariationDto: CreateProductVariationDto,
+        @UploadedFiles() images: Express.Multer.File[],
+    ): Promise<ApiResponse<any>> {
+        try {
+            const result = await this.productVariationService.create(
+                productId,
+                createProductVariationDto,
+                images || [],
+            );
+            return new ApiResponse(
+                'Product variation created successfully',
+                HttpStatus.CREATED,
+                result,
+            );
+        } catch (error) {
+            resError(error);
+        }
+    }
+
+    @Get()
+    async findAll(
+        @Param('productId', ParseIntPipe) productId: number,
+    ): Promise<ApiResponse<any>> {
+        try {
+            const result = await this.productVariationService.findAll(productId);
+            return new ApiResponse(
+                'Product variations retrieved successfully',
+                HttpStatus.OK,
+                result,
+            );
+        } catch (error) {
+            resError(error);
+        }
+    }
+
+    @Get(':id')
+    async findOne(
+        @Param('productId', ParseIntPipe) productId: number,
+        @Param('id', ParseIntPipe) id: number,
+    ): Promise<ApiResponse<any>> {
+        try {
+            const result = await this.productVariationService.findOne(productId, id);
+            return new ApiResponse(
+                'Product variation retrieved successfully',
+                HttpStatus.OK,
+                result,
+            );
+        } catch (error) {
+            resError(error);
+        }
+    }
+
+    @ApiConsumes('multipart/form-data')
+    @ApiBody({
+        description: "Update Product Variation",
+        type: UpdateProductVariationDto,
+    })
+    @UseInterceptors(FilesInterceptor("images", 6))
+    @Patch(':id')
+    async update(
+        @Param('productId', ParseIntPipe) productId: number,
+        @Param('id', ParseIntPipe) id: number,
+        @Body() updateProductVariationDto: UpdateProductVariationDto,
+        @UploadedFiles() images: Express.Multer.File[],
+    ): Promise<ApiResponse<any>> {
+        try {
+            const result = await this.productVariationService.update(
+                productId,
+                id,
+                updateProductVariationDto,
+                images || [],
+            );
+            return new ApiResponse(
+                'Product variation updated successfully',
+                HttpStatus.OK,
+                result,
+            );
+        } catch (error) {
+            resError(error);
+        }
+    }
+
+    @Delete(':id')
+    async remove(
+        @Param('productId', ParseIntPipe) productId: number,
+        @Param('id', ParseIntPipe) id: number,
+    ): Promise<ApiResponse<any>> {
+        try {
+            await this.productVariationService.remove(productId, id);
+            return new ApiResponse(
+                'Product variation deleted successfully',
+                HttpStatus.OK,
+                null,
+            );
+        } catch (error) {
+            resError(error);
+        }
+    }
+}

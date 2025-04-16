@@ -40,7 +40,7 @@ async function bootstrap() {
   const clientDocument = SwaggerModule.createDocument(app, clientConfig, {
     include: [ClientModule],
   });
-  SwaggerModule.setup('api/', app, clientDocument);
+  SwaggerModule.setup('api', app, clientDocument);
 
   // ========== Swagger for ADMIN ==========
   const adminConfig = new DocumentBuilder()
