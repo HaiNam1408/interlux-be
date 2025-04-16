@@ -7,12 +7,15 @@ import { CartModule } from './cart/cart.module';
 import { CartController } from './cart/cart.controller';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from 'src/prisma.service';
+import { OrderModule } from './order/order.module';
+import { OrderController } from './order/order.controller';
 
 @Module({
     imports: [
         AuthModule,
         CategoryModule,
         CartModule,
+        OrderModule,
     ],
     providers: [
         JwtService,
@@ -21,7 +24,8 @@ import { PrismaService } from 'src/prisma.service';
     controllers: [
         AuthController, 
         CategoryController,
-        CartController
+        CartController,
+        OrderController
     ],
 })
 export class ClientModule { }
