@@ -32,10 +32,11 @@ model Category {
   parentId  Int?
   parent    Category?  @relation("CategoryParent", fields: [parentId], references: [id])
   children  Category[] @relation("CategoryParent")
+  status    CommonStatus @default(ACTIVE)
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
 
-  Product Product[]
+  product Product[]
 }
 
 model Product {

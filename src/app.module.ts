@@ -6,14 +6,21 @@ import { MailModule } from './services/mail/mail.module';
 import { CacheModule } from '@nestjs/cache-manager';
 import { AdminModule } from './api/admin/admin.module';
 import { ClientModule } from './api/client/client.module';
+import { RouterModule } from '@nestjs/core';
 
 @Module({
   imports: [
+    RouterModule.register([
+      {
+        path: 'admin',
+        module: AdminModule,
+      },
+    ]),
     ConfigModule.forRoot({ isGlobal: true }),
     MailModule,
     CacheModule.register({ isGlobal: true }),
-    AdminModule,
     ClientModule,
+    AdminModule,
   ],
   controllers: [AppController],
   providers: [AppService],

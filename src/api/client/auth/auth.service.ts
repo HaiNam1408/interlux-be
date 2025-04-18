@@ -91,19 +91,41 @@ export class AuthService {
 
     async verifyEmail(token: string, email: string) {
         const cachedUser: string = await this.cacheService.get(`register:${email}`);
+
+        let error: string | undefined;
+
         if (!cachedUser) {
-            throw new HttpException("Token invalid or expired!", HttpStatus.BAD_REQUEST);
+            error = 'Token expired or invalid';
         }
 
-        const cacheData = JSON.parse(cachedUser);
-        const { verifyToken, ...userData } = cacheData;
-        if (verifyToken !== token) {
-            throw new HttpException("Token invalid!", HttpStatus.BAD_REQUEST);
+        let userData: any = null;
+
+        if (!error) {
+            const cacheData = JSON.parse(cachedUser);
+            const { verifyToken, ...restUserData } = cacheData;
+
+            if (verifyToken !== token) {
+                error = 'Invalid token';
+            } else {
+                userData = restUserData;
+            }
         }
 
-        await this.prisma.user.create({ data: userData });
-        await this.cacheService.del(`register:${email}`);
+        if (!error && userData) {
+            await this.prisma.user.create({ data: userData });
+            await this.cacheService.del(`register:${email}`);
+        }
+
+        const data = {
+            error,
+            name: userData?.username || 'User',
+            loginLink: `${process.env.CLIENT_URL}/login`
+        };
+        const html = await renderTemplate('register-response.ejs', data);
+
+        return html;
     }
+
 
     // Login
     async login(dto: LoginDto) {

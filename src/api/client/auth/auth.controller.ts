@@ -9,9 +9,10 @@ import { CacheInterceptor } from '@nestjs/cache-manager';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { Response } from 'express';
+import { renderTemplate } from 'src/utils/template.util';
 
 @ApiBearerAuth()
-@ApiTags("auth")
+    @ApiTags("Auth")
 @Controller("auth")
 export class AuthController {
     constructor(private authService: AuthService) { }
@@ -56,14 +57,19 @@ export class AuthController {
     }
 
     @Get('verify-email')
-    async verifyEmail(@Query('token') token: string, @Query('email') email: string) {
+    async verifyEmail(@Query('token') token: string, @Query('email') email: string, @Res() res: Response) {
         try {
-            await this.authService.verifyEmail(token, email);
-            return new ApiResponse<any>("User register successfully", HttpStatus.OK);
+            const html = await this.authService.verifyEmail(token, email);
+            res.send(html);
         } catch (error) {
-            throw error instanceof HttpException
-                ? error
-                : new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
+            const data = {
+                error: 'Internal Server Error. Please try again later.',
+                name: 'Guest',
+                loginLink: `${process.env.CLIENT_URL}/login`
+            };
+
+            const html = await renderTemplate('register-response.ejs', data);
+            res.send(html);
         }
     }
 
