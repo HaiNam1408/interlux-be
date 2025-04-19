@@ -6,7 +6,7 @@ import {
     HttpStatus,
     UseInterceptors,
 } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import ApiResponse from 'src/global/api.response';
 import { resError } from 'src/global/handleError.global';
 import { CacheInterceptor } from '@nestjs/cache-manager';
@@ -19,6 +19,7 @@ import { FindCategoriesClientDto } from './dto';
 export class CategoryClientController {
     constructor(private readonly categoryClientService: CategoryClientService) { }
 
+    @ApiOperation({ summary: 'Get category menu list' })
     @Get()
     async getCategoryMenu(): Promise<ApiResponse<any>> {
         try {
@@ -34,6 +35,7 @@ export class CategoryClientController {
         }
     }
 
+    @ApiOperation({ summary: 'Get featured categories' })
     @Get('featured')
     async getFeaturedCategories(): Promise<ApiResponse<any>> {
         try {
@@ -49,6 +51,7 @@ export class CategoryClientController {
         }
     }
 
+    @ApiOperation({ summary: 'Get category details by slug' })
     @Get(':slug')
     async findBySlug(@Param('slug') slug: string): Promise<ApiResponse<any>> {
         try {
@@ -64,6 +67,7 @@ export class CategoryClientController {
         }
     }
 
+    @ApiOperation({ summary: 'Get subcategories by parent slug' })
     @Get(':slug/subcategories')
     async getSubcategories(@Param('slug') slug: string): Promise<ApiResponse<any>> {
         try {
@@ -79,6 +83,7 @@ export class CategoryClientController {
         }
     }
 
+    @ApiOperation({ summary: 'Get category breadcrumb by slug' })
     @Get(':slug/breadcrumb')
     async getCategoryBreadcrumb(@Param('slug') slug: string): Promise<ApiResponse<any>> {
         try {

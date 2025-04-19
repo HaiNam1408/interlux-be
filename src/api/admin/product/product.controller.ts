@@ -18,7 +18,7 @@ import { ProductService } from './product.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { FindAllProductsDto } from './dto/find-all-products.dto';
-import { ApiBearerAuth, ApiBody, ApiConsumes, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { UpdateProductStatusDto } from './dto/update-product-status.dto';
 import ApiResponse from 'src/global/api.response';
@@ -33,6 +33,7 @@ export class ProductController {
     ) { }
 
 
+    @ApiOperation({ summary: 'Create a new product' })
     @ApiConsumes('multipart/form-data')
     @ApiBody({
         description: "Create Product",
@@ -65,6 +66,7 @@ export class ProductController {
     }
 
 
+    @ApiOperation({ summary: 'Get all products' })
     @Get()
     async findAll(@Query() findAllProductsDto: FindAllProductsDto): Promise<ApiResponse<any>> {
         try {
@@ -88,6 +90,7 @@ export class ProductController {
         }
     }
 
+    @ApiOperation({ summary: 'Get product by ID' })
     @Get(':id')
     async findOne(@Param('id', ParseIntPipe) id: number): Promise<ApiResponse<any>> {
         try {
@@ -103,6 +106,7 @@ export class ProductController {
         }
     }
 
+    @ApiOperation({ summary: 'Update product' })
     @ApiConsumes('multipart/form-data')
     @ApiBody({
         description: "Update Product For Admin",
@@ -133,6 +137,7 @@ export class ProductController {
         }
     }
 
+    @ApiOperation({ summary: 'Update product status' })
     @Patch(':id/status')
     async updateStatus(
         @Param('id', ParseIntPipe) id: number,
@@ -154,6 +159,7 @@ export class ProductController {
         }
     }
 
+    @ApiOperation({ summary: 'Delete product' })
     @Delete(':id')
     async remove(@Param('id', ParseIntPipe) id: number): Promise<ApiResponse<any>> {
         try {

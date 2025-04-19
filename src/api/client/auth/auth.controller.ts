@@ -3,7 +3,7 @@ import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import ApiResponse from 'src/global/api.response';
 import { CacheInterceptor } from '@nestjs/cache-manager';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
@@ -17,6 +17,7 @@ import { renderTemplate } from 'src/utils/template.util';
 export class AuthController {
     constructor(private authService: AuthService) { }
 
+    @ApiOperation({ summary: 'Test Redis connection' })
     @Get('test-redis')
     async test(): Promise<any> {
         try {
@@ -31,6 +32,7 @@ export class AuthController {
         }
     }
 
+    @ApiOperation({ summary: 'Register a new user' })
     @UseInterceptors(CacheInterceptor)
     @Post('register')
     async register(@Body() dto: RegisterDto): Promise<any> {
@@ -44,6 +46,7 @@ export class AuthController {
         }
     }
 
+    @ApiOperation({ summary: 'User login' })
     @Post('login')
     async login(@Body() dto: LoginDto) {
         try {
@@ -56,6 +59,7 @@ export class AuthController {
         }
     }
 
+    @ApiOperation({ summary: 'Verify user email' })
     @Get('verify-email')
     async verifyEmail(@Query('token') token: string, @Query('email') email: string, @Res() res: Response) {
         try {
@@ -73,6 +77,7 @@ export class AuthController {
         }
     }
 
+    @ApiOperation({ summary: 'Refresh authentication token' })
     @Post('refresh')
     async refreshToken(@Body() dto: RefreshTokenDto) {
         try {
@@ -85,6 +90,7 @@ export class AuthController {
         }
     }
 
+    @ApiOperation({ summary: 'Reset refresh token' })
     @Post('reset-refresh-token')
     async resetRefreshToken(@Body() userId: number) {
         try {
@@ -97,6 +103,7 @@ export class AuthController {
         }
     }
 
+    @ApiOperation({ summary: 'Request password reset' })
     @Post('forgot-password')
     async forgotPassword(@Body() dto: ForgotPasswordDto) {
         try {
@@ -109,6 +116,7 @@ export class AuthController {
         }
     }
 
+    @ApiOperation({ summary: 'Show password change page' })
     @Get('change-password')
     async checkToken(@Query('token') token: string, @Query('email') email: string, @Res() res: Response) {
         try {
@@ -121,6 +129,7 @@ export class AuthController {
         }
     }
 
+    @ApiOperation({ summary: 'Reset user password' })
     @Post('reset-password')
     async resetPassword(@Body() body: ResetPasswordDto, @Res() res: Response) {
         try {

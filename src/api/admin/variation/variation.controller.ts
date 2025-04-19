@@ -11,7 +11,7 @@ import {
     HttpStatus,
 } from '@nestjs/common';
 import { VariationService } from './variation.service';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CreateVariationDto, FindAllVariationsDto, UpdateVariationDto } from './dto';
 import ApiResponse from 'src/global/api.response';
 import { resError } from 'src/global/handleError.global';
@@ -22,6 +22,7 @@ import { resError } from 'src/global/handleError.global';
 export class VariationController {
     constructor(private readonly variationService: VariationService) { }
 
+    @ApiOperation({ summary: 'Create variation' })
     @Post()
     async create(@Body() createVariationDto: CreateVariationDto): Promise<ApiResponse<any>> {
         try {
@@ -36,6 +37,7 @@ export class VariationController {
         }
     }
 
+    @ApiOperation({ summary: 'Get all variations' })
     @Get()
     async findAll(@Query() findAllVariationsDto: FindAllVariationsDto): Promise<ApiResponse<any>> {
         try {
@@ -56,6 +58,7 @@ export class VariationController {
         }
     }
 
+    @ApiOperation({ summary: 'Get variation by ID' })
     @Get(':id')
     async findOne(@Param('id', ParseIntPipe) id: number): Promise<ApiResponse<any>> {
         try {
@@ -70,6 +73,7 @@ export class VariationController {
         }
     }
 
+    @ApiOperation({ summary: 'Update variation' })
     @Patch(':id')
     async update(
         @Param('id', ParseIntPipe) id: number,
@@ -87,6 +91,7 @@ export class VariationController {
         }
     }
 
+    @ApiOperation({ summary: 'Delete variation' })
     @Delete(':id')
     async remove(@Param('id', ParseIntPipe) id: number): Promise<ApiResponse<any>> {
         try {

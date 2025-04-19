@@ -13,39 +13,39 @@ export class CouponService {
     async validateCoupon(userId: number, validateCouponDto: ValidateCouponDto) {
         const { code } = validateCouponDto;
 
-        // Tìm mã giảm giá theo code
+        // Find coupon by code
         const coupon = await this.prisma.coupon.findUnique({
             where: { code },
         });
 
         if (!coupon) {
-            throw new NotFoundException('Mã giảm giá không tồn tại');
+            throw new NotFoundException('Coupon code not found');
         }
 
-        // Kiểm tra xem mã giảm giá còn hiệu lực không
+        // Check if the coupon is still valid
         const now = new Date();
         if (coupon.startDate > now) {
-            throw new BadRequestException('Mã giảm giá chưa có hiệu lực');
+            throw new BadRequestException('Coupon is not yet active');
         }
 
         if (coupon.endDate < now) {
-            throw new BadRequestException('Mã giảm giá đã hết hạn');
+            throw new BadRequestException('Coupon has expired');
         }
 
-        // Kiểm tra số lần sử dụng
+        // Check usage count
         if (coupon.maxUsage && coupon.usageCount >= coupon.maxUsage) {
-            throw new BadRequestException('Mã giảm giá đã hết lượt sử dụng');
+            throw new BadRequestException('Coupon has reached maximum usage limit');
         }
 
-        // Kiểm tra giá trị đơn hàng tối thiểu
+        // Check minimum purchase amount
         const cart = await this.cartService.getOrCreateCart(userId);
         const summary = await this.cartService.getCartSummary(cart);
 
         if (coupon.minPurchase && summary.subtotal < coupon.minPurchase) {
-            throw new BadRequestException(`Giá trị đơn hàng tối thiểu để sử dụng mã giảm giá là ${coupon.minPurchase}`);
+            throw new BadRequestException(`Minimum purchase amount to use this coupon is ${coupon.minPurchase}`);
         }
 
-        // Tính toán giá trị giảm giá
+        // Calculate discount amount
         let discountAmount = 0;
         if (coupon.type === 'PERCENTAGE') {
             discountAmount = summary.subtotal * (coupon.value / 100);

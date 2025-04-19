@@ -7,7 +7,7 @@ import {
     UseInterceptors,
     ParseIntPipe,
 } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import ApiResponse from 'src/global/api.response';
 import { resError } from 'src/global/handleError.global';
 import { CacheInterceptor } from '@nestjs/cache-manager';
@@ -20,6 +20,7 @@ import { FindAllProductsClientDto } from './dto';
 export class ProductClientController {
     constructor(private readonly productClientService: ProductClientService) { }
 
+    @ApiOperation({ summary: 'Get all products' })
     @Get()
     async findAll(
         @Query() findAllProductsClientDto: FindAllProductsClientDto,
@@ -59,6 +60,7 @@ export class ProductClientController {
         }
     }
 
+    @ApiOperation({ summary: 'Get featured products' })
     @Get('featured')
     async getFeaturedProducts(): Promise<ApiResponse<any>> {
         try {
@@ -75,6 +77,7 @@ export class ProductClientController {
         }
     }
 
+    @ApiOperation({ summary: 'Get bestselling products' })
     @Get('bestsellers')
     async getBestSellingProducts(): Promise<ApiResponse<any>> {
         try {
@@ -90,6 +93,7 @@ export class ProductClientController {
         }
     }
 
+    @ApiOperation({ summary: 'Get new arrival products' })
     @Get('new-arrivals')
     async getNewArrivals(): Promise<ApiResponse<any>> {
         try {
@@ -105,6 +109,7 @@ export class ProductClientController {
         }
     }
 
+    @ApiOperation({ summary: 'Get related products' })
     @Get('related/:id')
     async getRelatedProducts(
         @Param('id', ParseIntPipe) id: number,
@@ -122,6 +127,7 @@ export class ProductClientController {
         }
     }
 
+    @ApiOperation({ summary: 'Get product details by slug' })
     @Get('detail/:slug')
     async findBySlug(@Param('slug') slug: string): Promise<ApiResponse<any>> {
         try {
@@ -137,6 +143,7 @@ export class ProductClientController {
         }
     }
 
+    @ApiOperation({ summary: 'Get products by category' })
     @Get('category/:slug')
     async getProductsByCategory(
         @Param('slug') slug: string,
@@ -178,6 +185,7 @@ export class ProductClientController {
         }
     }
 
+    @ApiOperation({ summary: 'Get product variations' })
     @Get('variations/:productId')
     async getProductVariations(
         @Param('productId', ParseIntPipe) productId: number,
@@ -195,6 +203,7 @@ export class ProductClientController {
         }
     }
 
+    @ApiOperation({ summary: 'Get product variation by SKU' })
     @Get('variation/:sku')
     async getVariationBySku(
         @Param('sku') sku: string,
@@ -212,6 +221,7 @@ export class ProductClientController {
         }
     }
 
+    @ApiOperation({ summary: 'Get available filters for category' })
     @Get('filters/:categorySlug')
     async getAvailableFilters(
         @Param('categorySlug') categorySlug: string,

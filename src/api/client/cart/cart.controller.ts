@@ -23,7 +23,7 @@ export class CartController {
     constructor(private readonly cartService: CartService) { }
 
     @Get()
-    @ApiOperation({ summary: 'Lấy thông tin giỏ hàng của người dùng' })
+    @ApiOperation({ summary: 'Get user\'s cart information' })
     async getCart(@Request() req) {
         const cart = await this.cartService.getOrCreateCart(req.user.id);
         const summary = await this.cartService.getCartSummary(cart);
@@ -34,50 +34,50 @@ export class CartController {
     }
 
     @Post()
-    @ApiOperation({ summary: 'Thêm sản phẩm vào giỏ hàng' })
+    @ApiOperation({ summary: 'Add product to cart' })
     async addToCart(@Request() req, @Body() addToCartDto: AddToCartDto) {
         const cart = await this.cartService.addToCart(req.user.id, addToCartDto);
         const summary = await this.cartService.getCartSummary(cart);
         return ApiResponse.success({
             cart,
             summary,
-            message: 'Đã thêm sản phẩm vào giỏ hàng'
+            message: 'Product added to cart successfully'
         });
     }
 
     @Put('item')
-    @ApiOperation({ summary: 'Cập nhật số lượng sản phẩm trong giỏ hàng' })
+    @ApiOperation({ summary: 'Update product quantity in cart' })
     async updateCartItem(@Request() req, @Body() updateCartItemDto: UpdateCartItemDto) {
         const cart = await this.cartService.updateCartItem(req.user.id, updateCartItemDto);
         const summary = await this.cartService.getCartSummary(cart);
         return ApiResponse.success({
             cart,
             summary,
-            message: 'Đã cập nhật giỏ hàng'
+            message: 'Cart updated successfully'
         });
     }
 
     @Delete('item/:id')
-    @ApiOperation({ summary: 'Xóa sản phẩm khỏi giỏ hàng' })
+    @ApiOperation({ summary: 'Remove product from cart' })
     async removeCartItem(@Request() req, @Param('id') cartItemId: string) {
         const cart = await this.cartService.removeCartItem(req.user.id, +cartItemId);
         const summary = await this.cartService.getCartSummary(cart);
         return ApiResponse.success({
             cart,
             summary,
-            message: 'Đã xóa sản phẩm khỏi giỏ hàng'
+            message: 'Product removed from cart successfully'
         });
     }
 
     @Delete()
-    @ApiOperation({ summary: 'Xóa toàn bộ giỏ hàng' })
+    @ApiOperation({ summary: 'Clear entire cart' })
     async clearCart(@Request() req) {
         const cart = await this.cartService.clearCart(req.user.id);
         const summary = await this.cartService.getCartSummary(cart);
         return ApiResponse.success({
             cart,
             summary,
-            message: 'Đã xóa toàn bộ giỏ hàng'
+            message: 'Cart cleared successfully'
         });
     }
 }

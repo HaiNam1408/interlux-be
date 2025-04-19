@@ -22,16 +22,16 @@ export class OrderService {
             note,
         } = createOrderDto;
 
-        // Kiểm tra phương thức vận chuyển có tồn tại không
+        // Check if shipping method exists
         const shipping = await this.prisma.shipping.findUnique({
             where: { id: shippingId },
         });
 
         if (!shipping) {
-            throw new NotFoundException('Phương thức vận chuyển không tồn tại');
+            throw new NotFoundException('Shipping method not found');
         }
 
-        // Kiểm tra mã giảm giá nếu có
+        // Check coupon code if provided
         let coupon = null;
         let discountAmount = 0;
 
@@ -41,42 +41,42 @@ export class OrderService {
             });
 
             if (!coupon) {
-                throw new NotFoundException('Mã giảm giá không tồn tại');
+                throw new NotFoundException('Coupon code not found');
             }
 
-            // Kiểm tra mã giảm giá còn hiệu lực không
+            // Check if coupon is still valid
             const now = new Date();
             if (coupon.startDate > now || coupon.endDate < now) {
-                throw new BadRequestException('Mã giảm giá đã hết hạn hoặc chưa có hiệu lực');
+                throw new BadRequestException('Coupon has expired or is not yet active');
             }
 
-            // Kiểm tra số lần sử dụng còn lại
+            // Check remaining usage count
             if (coupon.maxUsage && coupon.usageCount >= coupon.maxUsage) {
-                throw new BadRequestException('Mã giảm giá đã hết lượt sử dụng');
+                throw new BadRequestException('Coupon has reached maximum usage limit');
             }
         }
 
-        // Lấy giỏ hàng hiện tại của user
+        // Get user's current cart
         const cart = await this.cartService.getOrCreateCart(userId);
 
-        // Kiểm tra giỏ hàng có sản phẩm không
+        // Check if cart has products
         if (cart.items.length === 0) {
-            throw new BadRequestException('Giỏ hàng của bạn đang trống');
+            throw new BadRequestException('Your cart is empty');
         }
 
-        // Tính tổng tiền của đơn hàng
+        // Calculate order total
         let subtotal = 0;
         const orderItems = [];
 
-        // Chuẩn bị dữ liệu cho các mục đơn hàng
+        // Prepare data for order items
         for (const item of cart.items) {
-            // Lấy thông tin sản phẩm và biến thể
+            // Get product and variation information
             const product = await this.prisma.product.findUnique({
                 where: { id: item.productId },
             });
 
             if (!product) {
-                throw new NotFoundException(`Sản phẩm với ID ${item.productId} không tồn tại`);
+                throw new NotFoundException(`Product with ID ${item.productId} not found`);
             }
 
             let itemPrice = product.price;
@@ -100,20 +100,20 @@ export class OrderService {
                 });
 
                 if (!productVariation) {
-                    throw new NotFoundException(`Biến thể sản phẩm với ID ${item.productVariationId} không tồn tại`);
+                    throw new NotFoundException(`Product variation with ID ${item.productVariationId} not found`);
                 }
 
-                // Kiểm tra số lượng tồn kho
+                // Check inventory
                 if (productVariation.inventory < item.quantity) {
-                    throw new BadRequestException(`Sản phẩm "${product.title}" chỉ còn ${productVariation.inventory} sản phẩm trong kho`);
+                    throw new BadRequestException(`Product "${product.title}" only has ${productVariation.inventory} items in stock`);
                 }
 
-                // Sử dụng giá của biến thể nếu có
+                // Use variation price if available
                 if (productVariation.price) {
                     itemPrice = productVariation.price;
                 }
 
-                // Sử dụng giảm giá của biến thể nếu có
+                // Use variation discount if available
                 if (productVariation.percentOff !== null) {
                     itemDiscount = productVariation.percentOff;
                 }
@@ -123,7 +123,7 @@ export class OrderService {
             const itemTotal = discountedPrice * item.quantity;
             subtotal += itemTotal;
 
-            // Tạo metadata cho sản phẩm
+            // Create product metadata
             const productMetadata = {
                 title: product.title,
                 slug: product.slug,
@@ -143,7 +143,7 @@ export class OrderService {
                 };
             }
 
-            // Thêm vào danh sách mục đơn hàng
+            // Add to order items list
             orderItems.push({
                 productId: item.productId,
                 productVariationId: item.productVariationId || null,
@@ -158,7 +158,7 @@ export class OrderService {
             });
         }
 
-        // Tính giảm giá từ mã coupon nếu có
+        // Calculate discount from coupon if available
         if (coupon) {
             if (coupon.type === 'PERCENTAGE') {
                 discountAmount = subtotal * (coupon.value / 100);
@@ -166,21 +166,21 @@ export class OrderService {
                 discountAmount = coupon.value;
             }
 
-            // Kiểm tra giá trị tối thiểu của đơn hàng
+            // Check minimum purchase requirement
             if (coupon.minPurchase && subtotal < coupon.minPurchase) {
-                throw new BadRequestException(`Giá trị đơn hàng tối thiểu để sử dụng mã giảm giá là ${coupon.minPurchase}`);
+                throw new BadRequestException(`Minimum purchase amount to use this coupon is ${coupon.minPurchase}`);
             }
         }
 
-        // Tính tổng tiền cuối cùng
+        // Calculate final total
         const shippingFee = shipping.price;
-        const tax = 0; // Có thể tính thuế nếu cần
+        const tax = 0; // Can calculate tax if needed
         const total = subtotal + shippingFee + tax - discountAmount;
 
-        // Tạo mã đơn hàng
+        // Create order number
         const orderNumber = `ORD${Date.now()}${Math.floor(Math.random() * 1000)}`;
 
-        // Khởi tạo thanh toán
+        // Initialize payment
         const payment = await this.prisma.payment.create({
             data: {
                 amount: total,
@@ -195,7 +195,7 @@ export class OrderService {
             },
         });
 
-        // Tạo đơn hàng mới
+        // Create new order
         const order = await this.prisma.order.create({
             data: {
                 orderNumber,
@@ -224,7 +224,7 @@ export class OrderService {
             },
         });
 
-        // Cập nhật số lượng đã sử dụng cho mã giảm giá
+        // Update coupon usage count
         if (coupon) {
             await this.prisma.coupon.update({
                 where: { id: coupon.id },
@@ -232,7 +232,7 @@ export class OrderService {
             });
         }
 
-        // Cập nhật số lượng tồn kho cho các sản phẩm
+        // Update product inventory
         for (const item of cart.items) {
             if (item.productVariationId) {
                 await this.prisma.productVariation.update({
@@ -241,14 +241,14 @@ export class OrderService {
                 });
             }
 
-            // Cập nhật số lượng đã bán cho sản phẩm
+            // Update product sold count
             await this.prisma.product.update({
                 where: { id: item.productId },
                 data: { sold: { increment: item.quantity } },
             });
         }
 
-        // Xóa giỏ hàng sau khi tạo đơn hàng thành công
+        // Clear cart after successful order creation
         await this.cartService.clearCart(userId);
 
         return order;
@@ -279,11 +279,11 @@ export class OrderService {
         });
 
         if (!order) {
-            throw new NotFoundException('Đơn hàng không tồn tại');
+            throw new NotFoundException('Order not found');
         }
 
         if (order.userId !== userId) {
-            throw new BadRequestException('Bạn không có quyền xem đơn hàng này');
+            throw new BadRequestException('You do not have permission to view this order');
         }
 
         return order;
@@ -299,19 +299,19 @@ export class OrderService {
         });
 
         if (!order) {
-            throw new NotFoundException('Đơn hàng không tồn tại');
+            throw new NotFoundException('Order not found');
         }
 
         if (order.userId !== userId) {
-            throw new BadRequestException('Bạn không có quyền hủy đơn hàng này');
+            throw new BadRequestException('You do not have permission to cancel this order');
         }
 
-        // Chỉ có thể hủy đơn hàng ở trạng thái PENDING hoặc CONFIRMED
+        // Can only cancel orders in PENDING or CONFIRMED status
         if (order.status !== OrderStatus.PENDING && order.status !== OrderStatus.CONFIRMED) {
-            throw new BadRequestException('Không thể hủy đơn hàng ở trạng thái hiện tại');
+            throw new BadRequestException('Cannot cancel order in current status');
         }
 
-        // Cập nhật trạng thái đơn hàng
+        // Update order status
         const updatedOrder = await this.prisma.order.update({
             where: { id: orderId },
             data: { status: OrderStatus.CANCELLED },
@@ -323,13 +323,13 @@ export class OrderService {
             },
         });
 
-        // Cập nhật trạng thái thanh toán
+        // Update payment status
         await this.prisma.payment.update({
             where: { id: order.paymentId },
             data: { status: PaymentStatus.CANCELLED },
         });
 
-        // Hoàn trả số lượng sản phẩm vào kho
+        // Return products to inventory
         for (const item of order.items) {
             if (item.productVariationId) {
                 await this.prisma.productVariation.update({
@@ -338,14 +338,14 @@ export class OrderService {
                 });
             }
 
-            // Giảm số lượng đã bán của sản phẩm
+            // Decrease product sold count
             await this.prisma.product.update({
                 where: { id: item.productId },
                 data: { sold: { decrement: item.quantity } },
             });
         }
 
-        // Giảm số lần sử dụng mã giảm giá nếu có
+        // Decrease coupon usage count if applicable
         if (order.couponId) {
             await this.prisma.coupon.update({
                 where: { id: order.couponId },
@@ -363,41 +363,41 @@ export class OrderService {
         });
     }
 
-    // Phương thức tạo đơn hàng từ Admin
+    // Method to create order from Admin
     async createOrderByAdmin(adminId: number, userId: number, createOrderDto: CreateOrderDto) {
-        // Kiểm tra người dùng tồn tại
+        // Check if user exists
         const user = await this.prisma.user.findUnique({
             where: { id: userId },
         });
 
         if (!user) {
-            throw new NotFoundException('Người dùng không tồn tại');
+            throw new NotFoundException('User not found');
         }
 
-        // Sử dụng logic tạo đơn hàng tương tự như createOrder
+        // Use the same order creation logic as createOrder
         return this.createOrder(userId, createOrderDto);
     }
 
-    // Phương thức cập nhật trạng thái đơn hàng từ Admin
+    // Method to update order status from Admin
     async updateOrderStatus(adminId: number, orderId: number, status: OrderStatus) {
         const order = await this.prisma.order.findUnique({
             where: { id: orderId },
         });
 
         if (!order) {
-            throw new NotFoundException('Đơn hàng không tồn tại');
+            throw new NotFoundException('Order not found');
         }
 
-        // Kiểm tra logic chuyển trạng thái
+        // Check status transition logic
         if (order.status === OrderStatus.CANCELLED) {
-            throw new BadRequestException('Không thể cập nhật đơn hàng đã hủy');
+            throw new BadRequestException('Cannot update cancelled order');
         }
 
         if (order.status === OrderStatus.COMPLETED && status !== OrderStatus.REFUNDED) {
-            throw new BadRequestException('Không thể thay đổi trạng thái đơn hàng đã hoàn thành');
+            throw new BadRequestException('Cannot change status of completed order');
         }
 
-        // Cập nhật trạng thái đơn hàng
+        // Update order status
         const updatedOrder = await this.prisma.order.update({
             where: { id: orderId },
             data: { status },
@@ -409,7 +409,7 @@ export class OrderService {
             },
         });
 
-        // Cập nhật trạng thái thanh toán tương ứng
+        // Update corresponding payment status
         let paymentStatus: PaymentStatus;
         switch (status) {
             case OrderStatus.COMPLETED:
@@ -430,9 +430,9 @@ export class OrderService {
             data: { status: paymentStatus },
         });
 
-        // Xử lý hoàn trả kho nếu đơn hàng bị hủy
+        // Process inventory return if order is cancelled
         if (status === OrderStatus.CANCELLED || status === OrderStatus.REFUNDED) {
-            // Hoàn trả số lượng sản phẩm vào kho
+            // Return products to inventory
             for (const item of updatedOrder.items) {
                 if (item.productVariationId) {
                     await this.prisma.productVariation.update({
@@ -441,14 +441,14 @@ export class OrderService {
                     });
                 }
 
-                // Giảm số lượng đã bán của sản phẩm
+                // Decrease product sold count
                 await this.prisma.product.update({
                     where: { id: item.productId },
                     data: { sold: { decrement: item.quantity } },
                 });
             }
 
-            // Giảm số lần sử dụng mã giảm giá nếu có
+            // Decrease coupon usage count if applicable
             if (order.couponId) {
                 await this.prisma.coupon.update({
                     where: { id: order.couponId },

@@ -20,7 +20,7 @@ export class CouponController {
     constructor(private readonly couponService: CouponService) { }
 
     @Post('validate')
-    @ApiOperation({ summary: 'Kiểm tra tính hợp lệ của mã giảm giá' })
+    @ApiOperation({ summary: 'Validate coupon code' })
     async validateCoupon(@Request() req, @Body() validateCouponDto: ValidateCouponDto) {
         const result = await this.couponService.validateCoupon(req.user.id, validateCouponDto);
         return ApiResponse.success({
@@ -30,7 +30,7 @@ export class CouponController {
     }
 
     @Get('available')
-    @ApiOperation({ summary: 'Lấy danh sách mã giảm giá có sẵn' })
+    @ApiOperation({ summary: 'Get available coupon codes' })
     async getAvailableCoupons() {
         const coupons = await this.couponService.getAvailableCoupons();
         return ApiResponse.success({ coupons });

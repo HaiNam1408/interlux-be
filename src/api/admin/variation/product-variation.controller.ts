@@ -13,7 +13,7 @@ import {
     UploadedFiles,
 } from '@nestjs/common';
 import { ProductVariationService } from './product-variation.service';
-import { ApiBearerAuth, ApiBody, ApiConsumes, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CreateProductVariationDto, UpdateProductVariationDto } from './dto';
 import ApiResponse from 'src/global/api.response';
 import { resError } from 'src/global/handleError.global';
@@ -25,6 +25,7 @@ import { FilesInterceptor } from '@nestjs/platform-express';
 export class ProductVariationController {
     constructor(private readonly productVariationService: ProductVariationService) { }
 
+    @ApiOperation({ summary: 'Create product variation' })
     @ApiConsumes('multipart/form-data')
     @ApiBody({
         description: "Create Product Variation",
@@ -53,6 +54,7 @@ export class ProductVariationController {
         }
     }
 
+    @ApiOperation({ summary: 'Get all product variations' })
     @Get()
     async findAll(
         @Param('productId', ParseIntPipe) productId: number,
@@ -69,6 +71,7 @@ export class ProductVariationController {
         }
     }
 
+    @ApiOperation({ summary: 'Get product variation by ID' })
     @Get(':id')
     async findOne(
         @Param('productId', ParseIntPipe) productId: number,
@@ -86,6 +89,7 @@ export class ProductVariationController {
         }
     }
 
+    @ApiOperation({ summary: 'Update product variation' })
     @ApiConsumes('multipart/form-data')
     @ApiBody({
         description: "Update Product Variation",
@@ -116,6 +120,7 @@ export class ProductVariationController {
         }
     }
 
+    @ApiOperation({ summary: 'Delete product variation' })
     @Delete(':id')
     async remove(
         @Param('productId', ParseIntPipe) productId: number,

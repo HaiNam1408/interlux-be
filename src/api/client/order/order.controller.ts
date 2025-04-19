@@ -23,41 +23,41 @@ export class OrderController {
     constructor(private readonly orderService: OrderService) { }
 
     @Post()
-    @ApiOperation({ summary: 'Tạo đơn hàng mới' })
+    @ApiOperation({ summary: 'Create a new order' })
     async createOrder(@Request() req, @Body() createOrderDto: CreateOrderDto) {
         const order = await this.orderService.createOrder(req.user.id, createOrderDto);
         return ApiResponse.success({
             order,
-            message: 'Đơn hàng đã được tạo thành công',
+            message: 'Order created successfully',
         });
     }
 
     @Get()
-    @ApiOperation({ summary: 'Lấy danh sách đơn hàng của người dùng' })
+    @ApiOperation({ summary: 'Get user\'s order list' })
     async getOrders(@Request() req) {
         const orders = await this.orderService.getOrders(req.user.id);
         return ApiResponse.success({ orders });
     }
 
     @Get(':id')
-    @ApiOperation({ summary: 'Lấy chi tiết đơn hàng' })
+    @ApiOperation({ summary: 'Get order details' })
     async getOrderDetail(@Request() req, @Param('id') id: string) {
         const order = await this.orderService.getOrderDetail(req.user.id, +id);
         return ApiResponse.success({ order });
     }
 
     @Put(':id/cancel')
-    @ApiOperation({ summary: 'Hủy đơn hàng' })
+    @ApiOperation({ summary: 'Cancel an order' })
     async cancelOrder(@Request() req, @Param('id') id: string) {
         const order = await this.orderService.cancelOrder(req.user.id, +id);
         return ApiResponse.success({
             order,
-            message: 'Đơn hàng đã được hủy thành công',
+            message: 'Order cancelled successfully',
         });
     }
 
     @Get('shipping/methods')
-    @ApiOperation({ summary: 'Lấy danh sách phương thức vận chuyển' })
+    @ApiOperation({ summary: 'Get shipping methods' })
     async getShippingMethods() {
         const shippingMethods = await this.orderService.getShippingMethods();
         return ApiResponse.success({ shippingMethods });

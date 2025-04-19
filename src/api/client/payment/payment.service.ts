@@ -22,13 +22,13 @@ export class PaymentService {
         });
 
         if (!payment) {
-            throw new NotFoundException('Thanh toán không tồn tại');
+            throw new NotFoundException('Payment not found');
         }
 
-        // Kiểm tra xem thanh toán có thuộc về người dùng không
+        // Check if the payment belongs to the user
         const hasAccess = payment.orders.some((order) => order.userId === userId);
         if (!hasAccess) {
-            throw new BadRequestException('Bạn không có quyền truy cập thông tin thanh toán này');
+            throw new BadRequestException('You do not have permission to access this payment information');
         }
 
         return payment;
@@ -37,26 +37,26 @@ export class PaymentService {
     async verifyPayment(userId: number, verifyPaymentDto: VerifyPaymentDto) {
         const { orderId, transactionId, metadata } = verifyPaymentDto;
 
-        // Tìm đơn hàng
+        // Find the order
         const order = await this.prisma.order.findUnique({
             where: { id: orderId },
             include: { payment: true },
         });
 
         if (!order) {
-            throw new NotFoundException('Đơn hàng không tồn tại');
+            throw new NotFoundException('Order not found');
         }
 
         if (order.userId !== userId) {
-            throw new BadRequestException('Bạn không có quyền cập nhật thông tin thanh toán này');
+            throw new BadRequestException('You do not have permission to update this payment information');
         }
 
-        // Kiểm tra trạng thái đơn hàng, chỉ có thể cập nhật nếu đơn hàng đang PENDING
+        // Check order status, can only update if the order is PENDING
         if (order.status !== OrderStatus.PENDING && order.status !== OrderStatus.PROCESSING) {
-            throw new BadRequestException('Không thể cập nhật thông tin thanh toán cho đơn hàng này');
+            throw new BadRequestException('Cannot update payment information for this order');
         }
 
-        // Cập nhật thông tin thanh toán
+        // Update payment information
         const updatedPayment = await this.prisma.payment.update({
             where: { id: order.paymentId },
             data: {
@@ -66,7 +66,7 @@ export class PaymentService {
             },
         });
 
-        // Cập nhật trạng thái đơn hàng sang CONFIRMED
+        // Update order status to CONFIRMED
         await this.prisma.order.update({
             where: { id: orderId },
             data: { status: OrderStatus.CONFIRMED },
@@ -75,7 +75,7 @@ export class PaymentService {
         return updatedPayment;
     }
 
-    // Tạo URL thanh toán cho các cổng thanh toán trực tuyến
+    // Create payment URL for online payment gateways
     async createPaymentUrl(userId: number, orderId: number) {
         const order = await this.prisma.order.findUnique({
             where: { id: orderId },
@@ -83,20 +83,20 @@ export class PaymentService {
         });
 
         if (!order) {
-            throw new NotFoundException('Đơn hàng không tồn tại');
+            throw new NotFoundException('Order not found');
         }
 
         if (order.userId !== userId) {
-            throw new BadRequestException('Bạn không có quyền tạo URL thanh toán cho đơn hàng này');
+            throw new BadRequestException('You do not have permission to create payment URL for this order');
         }
 
-        // Kiểm tra trạng thái đơn hàng
+        // Check order status
         if (order.status !== OrderStatus.PENDING) {
-            throw new BadRequestException('Không thể tạo URL thanh toán cho đơn hàng này');
+            throw new BadRequestException('Cannot create payment URL for this order');
         }
 
-        // Đây là nơi bạn sẽ tích hợp với các cổng thanh toán như VNPay, MoMo, PayPal...
-        // Ví dụ với VNPay:
+        // This is where you would integrate with payment gateways like VNPay, MoMo, PayPal...
+        // Example with VNPay:
         const paymentUrl = this.generateMockPaymentUrl(order);
 
         return {
@@ -107,31 +107,31 @@ export class PaymentService {
         };
     }
 
-    // Hàm giả lập tạo URL thanh toán (sẽ thay thế bằng tích hợp thực tế với cổng thanh toán)
+    // Mock function to create payment URL (will be replaced with actual payment gateway integration)
     private generateMockPaymentUrl(order) {
-        // Trong thực tế, bạn sẽ tích hợp với cổng thanh toán ở đây
-        // Ví dụ với VNPay, MoMo, PayPal...
+        // In reality, you would integrate with a payment gateway here
+        // For example with VNPay, MoMo, PayPal...
 
         return `https://payment-gateway.example.com/pay?orderNumber=${order.orderNumber}&amount=${order.total}&returnUrl=https://your-website.com/payment/callback`;
     }
 
-    // Xử lý callback từ cổng thanh toán
+    // Handle callback from payment gateway
     async handlePaymentCallback(params: any) {
-        // Params có thể chứa orderNumber, transactionId, status từ cổng thanh toán
+        // Params may contain orderNumber, transactionId, status from the payment gateway
 
-        // Tìm đơn hàng dựa trên orderNumber
+        // Find order based on orderNumber
         const order = await this.prisma.order.findUnique({
             where: { orderNumber: params.orderNumber },
             include: { payment: true },
         });
 
         if (!order) {
-            throw new NotFoundException('Đơn hàng không tồn tại');
+            throw new NotFoundException('Order not found');
         }
 
-        // Kiểm tra và cập nhật trạng thái thanh toán
+        // Check and update payment status
         if (params.status === 'success') {
-            // Cập nhật trạng thái thanh toán thành công
+            // Update payment status to successful
             await this.prisma.payment.update({
                 where: { id: order.paymentId },
                 data: {
@@ -141,7 +141,7 @@ export class PaymentService {
                 },
             });
 
-            // Cập nhật trạng thái đơn hàng
+            // Update order status
             await this.prisma.order.update({
                 where: { id: order.id },
                 data: { status: OrderStatus.CONFIRMED },
@@ -149,10 +149,10 @@ export class PaymentService {
 
             return {
                 success: true,
-                message: 'Thanh toán thành công',
+                message: 'Payment successful',
             };
         } else {
-            // Cập nhật trạng thái thanh toán thất bại
+            // Update payment status to failed
             await this.prisma.payment.update({
                 where: { id: order.paymentId },
                 data: {
@@ -164,7 +164,7 @@ export class PaymentService {
 
             return {
                 success: false,
-                message: 'Thanh toán thất bại',
+                message: 'Payment failed',
             };
         }
     }

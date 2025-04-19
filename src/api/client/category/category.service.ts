@@ -9,11 +9,10 @@ export class CategoryClientService {
     constructor(private readonly prisma: PrismaService) {}
 
     async getCategoryMenu(): Promise<any> {
-        // Lấy danh sách danh mục và sắp xếp thành cấu trúc menu
         const categories = await this.prisma.category.findMany({
             where: {
                 status: CommonStatus.ACTIVE,
-                parentId: null, // Chỉ lấy danh mục cha (cấp cao nhất)
+                parentId: null,
             },
             orderBy: [
                 { sort: 'asc' },
@@ -39,12 +38,10 @@ export class CategoryClientService {
             },
         });
 
-        // Định dạng lại dữ liệu để làm menu
         return categories.map(category => this.formatCategoryForMenu(category));
     }
 
     async getFeaturedCategories(): Promise<any> {
-        // Lấy danh mục nổi bật (có thể dựa vào số lượng sản phẩm, thứ tự sắp xếp, v.v.)
         const featuredCategories = await this.prisma.category.findMany({
             where: {
                 status: CommonStatus.ACTIVE,
@@ -53,7 +50,7 @@ export class CategoryClientService {
                 { sort: 'asc' },
                 { name: 'asc' },
             ],
-            take: 6, // Số lượng danh mục nổi bật hiển thị
+            take: 6,
             include: {
                 _count: {
                     select: {
@@ -64,7 +61,7 @@ export class CategoryClientService {
                 },
                 product: {
                     where: { status: 'ACTIVE' },
-                    take: 1, // Lấy 1 sản phẩm làm ảnh đại diện
+                    take: 1,
                     select: {
                         images: true,
                     }
@@ -77,9 +74,6 @@ export class CategoryClientService {
             name: category.name,
             slug: category.slug,
             productCount: category._count.product,
-            thumbnailImage: category.product.length > 0 && category.product[0].images
-                ? JSON.parse(category.product[0].images as string)[0] || null
-                : null,
         }));
     }
 
@@ -112,7 +106,6 @@ export class CategoryClientService {
             throw new HttpException('Category not found', HttpStatus.NOT_FOUND);
         }
 
-        // Lấy một số sản phẩm tiêu biểu của danh mục
         const featuredProducts = await this.prisma.product.findMany({
             where: {
                 categoryId: category.id,
@@ -131,7 +124,6 @@ export class CategoryClientService {
             }
         });
 
-        // Biến đổi dữ liệu sản phẩm
         const transformedProducts = featuredProducts.map(product => ({
             ...product,
             images: product.images ? JSON.parse(product.images as string) : [],
@@ -147,7 +139,6 @@ export class CategoryClientService {
     }
 
     async getSubcategories(slug: string): Promise<any> {
-        // Tìm category theo slug
         const category = await this.prisma.category.findUnique({
             where: {
                 slug,
@@ -160,7 +151,6 @@ export class CategoryClientService {
             throw new HttpException('Category not found', HttpStatus.NOT_FOUND);
         }
 
-        // Lấy danh sách danh mục con
         const subcategories = await this.prisma.category.findMany({
             where: {
                 parentId: category.id,
@@ -178,7 +168,6 @@ export class CategoryClientService {
                         }
                     }
                 },
-                // Có thể thêm truy vấn về danh mục con của subcategory nếu cần
             }
         });
 
@@ -210,7 +199,6 @@ export class CategoryClientService {
 
         const breadcrumb = [];
 
-        // Thêm danh mục gốc nếu có
         if (category.parent?.parent) {
             breadcrumb.push({
                 id: category.parent.parent.id,
@@ -219,7 +207,6 @@ export class CategoryClientService {
             });
         }
 
-        // Thêm danh mục cha nếu có
         if (category.parent) {
             breadcrumb.push({
                 id: category.parent.id,
@@ -228,7 +215,6 @@ export class CategoryClientService {
             });
         }
 
-        // Thêm danh mục hiện tại
         breadcrumb.push({
             id: category.id,
             name: category.name,
@@ -238,7 +224,6 @@ export class CategoryClientService {
         return breadcrumb;
     }
 
-    // Helper method để định dạng category cho menu
     private formatCategoryForMenu(category: any): any {
         return {
             id: category.id,
