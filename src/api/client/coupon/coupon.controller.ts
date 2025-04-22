@@ -22,7 +22,7 @@ export class CouponController {
     @Post('validate')
     @ApiOperation({ summary: 'Validate coupon code' })
     async validateCoupon(@Request() req, @Body() validateCouponDto: ValidateCouponDto) {
-        const result = await this.couponService.validateCoupon(req.user.id, validateCouponDto);
+        const result = await this.couponService.validateCoupon(req.user.userId, validateCouponDto);
         return ApiResponse.success({
             ...result,
             message: 'Mã giảm giá hợp lệ',

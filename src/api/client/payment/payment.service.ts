@@ -2,10 +2,14 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { PrismaService } from '../../../prisma.service';
 import { VerifyPaymentDto } from './dto';
 import { OrderStatus, PaymentStatus } from '@prisma/client';
+import { PaymentStrategyFactory } from './strategies';
 
 @Injectable()
 export class PaymentService {
-    constructor(private prisma: PrismaService) { }
+    constructor(
+        private prisma: PrismaService,
+        private paymentStrategyFactory: PaymentStrategyFactory
+    ) { }
 
     async getPaymentDetail(userId: number, paymentId: number) {
         const payment = await this.prisma.payment.findUnique({
@@ -76,10 +80,19 @@ export class PaymentService {
     }
 
     // Create payment URL for online payment gateways
-    async createPaymentUrl(userId: number, orderId: number) {
+    async createPaymentUrl(userId: number, orderId: number, paymentMethod: string) {
         const order = await this.prisma.order.findUnique({
             where: { id: orderId },
-            include: { payment: true },
+            include: {
+                payment: true,
+                user: {
+                    select: {
+                        id: true,
+                        email: true,
+                        username: true
+                    }
+                }
+            },
         });
 
         if (!order) {
@@ -95,77 +108,95 @@ export class PaymentService {
             throw new BadRequestException('Cannot create payment URL for this order');
         }
 
-        // This is where you would integrate with payment gateways like VNPay, MoMo, PayPal...
-        // Example with VNPay:
-        const paymentUrl = this.generateMockPaymentUrl(order);
+        try {
+            // Get the appropriate payment strategy
+            const paymentStrategy = this.paymentStrategyFactory.getStrategy(paymentMethod);
 
-        return {
-            paymentUrl,
-            orderId: order.id,
-            orderNumber: order.orderNumber,
-            amount: order.total,
-        };
+            // Update payment method in the database
+            await this.prisma.payment.update({
+                where: { id: order.paymentId },
+                data: { method: paymentMethod.toUpperCase() as any }
+            });
+
+            // Generate payment URL using the strategy
+            const paymentUrl = await paymentStrategy.generatePaymentUrl(order);
+
+            return {
+                paymentUrl,
+                orderId: order.id,
+                orderNumber: order.orderNumber,
+                amount: order.total,
+                paymentMethod
+            };
+        } catch (error) {
+            throw new BadRequestException(`Error creating payment URL: ${error.message}`);
+        }
     }
 
-    // Mock function to create payment URL (will be replaced with actual payment gateway integration)
-    private generateMockPaymentUrl(order) {
-        // In reality, you would integrate with a payment gateway here
-        // For example with VNPay, MoMo, PayPal...
 
-        return `https://payment-gateway.example.com/pay?orderNumber=${order.orderNumber}&amount=${order.total}&returnUrl=https://your-website.com/payment/callback`;
-    }
 
     // Handle callback from payment gateway
-    async handlePaymentCallback(params: any) {
-        // Params may contain orderNumber, transactionId, status from the payment gateway
+    async handlePaymentCallback(paymentMethod: string, params: any) {
+        try {
+            // Get the appropriate payment strategy
+            const paymentStrategy = this.paymentStrategyFactory.getStrategy(paymentMethod);
 
-        // Find order based on orderNumber
-        const order = await this.prisma.order.findUnique({
-            where: { orderNumber: params.orderNumber },
-            include: { payment: true },
-        });
+            // Process the callback using the strategy
+            const result = await paymentStrategy.handleCallback(params);
 
-        if (!order) {
-            throw new NotFoundException('Order not found');
-        }
+            // Find order based on orderNumber or other identifier in the params
+            const orderIdentifier = params.orderNumber || params.vnp_TxnRef || params.invoice || params.orderId;
 
-        // Check and update payment status
-        if (params.status === 'success') {
-            // Update payment status to successful
-            await this.prisma.payment.update({
-                where: { id: order.paymentId },
-                data: {
-                    transactionId: params.transactionId,
-                    status: PaymentStatus.COMPLETED,
-                    metadata: params,
+            if (!orderIdentifier) {
+                throw new BadRequestException('Order identifier not found in callback parameters');
+            }
+
+            const order = await this.prisma.order.findFirst({
+                where: {
+                    OR: [
+                        { orderNumber: orderIdentifier },
+                        { id: parseInt(orderIdentifier, 10) || 0 }
+                    ]
                 },
+                include: { payment: true },
             });
 
-            // Update order status
-            await this.prisma.order.update({
-                where: { id: order.id },
-                data: { status: OrderStatus.CONFIRMED },
-            });
+            if (!order) {
+                throw new NotFoundException('Order not found');
+            }
 
-            return {
-                success: true,
-                message: 'Payment successful',
-            };
-        } else {
-            // Update payment status to failed
-            await this.prisma.payment.update({
-                where: { id: order.paymentId },
-                data: {
-                    transactionId: params.transactionId,
-                    status: PaymentStatus.FAILED,
-                    metadata: params,
-                },
-            });
+            // Update payment status based on callback result
+            if (result.success) {
+                // Update payment status to successful
+                await this.prisma.payment.update({
+                    where: { id: order.paymentId },
+                    data: {
+                        transactionId: result.transactionId,
+                        status: PaymentStatus.COMPLETED,
+                        metadata: result.metadata,
+                    },
+                });
 
-            return {
-                success: false,
-                message: 'Payment failed',
-            };
+                // Update order status
+                await this.prisma.order.update({
+                    where: { id: order.id },
+                    data: { status: OrderStatus.CONFIRMED },
+                });
+            } else {
+                // Update payment status to failed
+                await this.prisma.payment.update({
+                    where: { id: order.paymentId },
+                    data: {
+                        transactionId: result.transactionId,
+                        status: PaymentStatus.FAILED,
+                        metadata: result.metadata,
+                    },
+                });
+            }
+
+            return result;
+        } catch (error) {
+            throw new BadRequestException(`Error processing payment callback: ${error.message}`);
         }
     }
 }

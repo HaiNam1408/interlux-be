@@ -7,6 +7,7 @@ import { CacheModule } from '@nestjs/cache-manager';
 import { AdminModule } from './api/admin/admin.module';
 import { ClientModule } from './api/client/client.module';
 import { RouterModule } from '@nestjs/core';
+import { RedisOptions } from './common/configs/redis.config';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { RouterModule } from '@nestjs/core';
     ConfigModule.forRoot({ isGlobal: true }),
     MailModule,
     CacheModule.register({ isGlobal: true }),
+    // CacheModule.registerAsync(RedisOptions),
     ClientModule,
     AdminModule,
   ],

@@ -25,7 +25,7 @@ export class CartController {
     @Get()
     @ApiOperation({ summary: 'Get user\'s cart information' })
     async getCart(@Request() req) {
-        const cart = await this.cartService.getOrCreateCart(req.user.id);
+        const cart = await this.cartService.getOrCreateCart(req.user.userId);
         const summary = await this.cartService.getCartSummary(cart);
         return ApiResponse.success({
             cart,
@@ -36,7 +36,7 @@ export class CartController {
     @Post()
     @ApiOperation({ summary: 'Add product to cart' })
     async addToCart(@Request() req, @Body() addToCartDto: AddToCartDto) {
-        const cart = await this.cartService.addToCart(req.user.id, addToCartDto);
+        const cart = await this.cartService.addToCart(req.user.userId, addToCartDto);
         const summary = await this.cartService.getCartSummary(cart);
         return ApiResponse.success({
             cart,
@@ -48,7 +48,7 @@ export class CartController {
     @Put('item')
     @ApiOperation({ summary: 'Update product quantity in cart' })
     async updateCartItem(@Request() req, @Body() updateCartItemDto: UpdateCartItemDto) {
-        const cart = await this.cartService.updateCartItem(req.user.id, updateCartItemDto);
+        const cart = await this.cartService.updateCartItem(req.user.userId, updateCartItemDto);
         const summary = await this.cartService.getCartSummary(cart);
         return ApiResponse.success({
             cart,
@@ -60,7 +60,7 @@ export class CartController {
     @Delete('item/:id')
     @ApiOperation({ summary: 'Remove product from cart' })
     async removeCartItem(@Request() req, @Param('id') cartItemId: string) {
-        const cart = await this.cartService.removeCartItem(req.user.id, +cartItemId);
+        const cart = await this.cartService.removeCartItem(req.user.userId, +cartItemId);
         const summary = await this.cartService.getCartSummary(cart);
         return ApiResponse.success({
             cart,
@@ -72,7 +72,7 @@ export class CartController {
     @Delete()
     @ApiOperation({ summary: 'Clear entire cart' })
     async clearCart(@Request() req) {
-        const cart = await this.cartService.clearCart(req.user.id);
+        const cart = await this.cartService.clearCart(req.user.userId);
         const summary = await this.cartService.getCartSummary(cart);
         return ApiResponse.success({
             cart,

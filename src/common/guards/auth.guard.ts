@@ -39,6 +39,7 @@ export class AuthGuard implements CanActivate {
             if (decodeToken.exp < Date.now() / 1000) {
                 throw new UnauthorizedException("AccessToken Expired");
             }
+            payload.userId = Number(payload.userId);
             request["user"] = payload;
         } catch (err) {
             throw new UnauthorizedException();

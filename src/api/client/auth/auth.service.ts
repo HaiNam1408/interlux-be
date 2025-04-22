@@ -26,7 +26,7 @@ export class AuthService {
         private jwtService: JwtService,
         private mailService: MailService,
         @Inject(CACHE_MANAGER) private cacheService: Cache
-    ) { }
+    ) { console.log(cacheService.stores); }
 
     // Generate Access Token & Refresh Token
     private async generateTokens(userId: string, email: string, role: string) {
