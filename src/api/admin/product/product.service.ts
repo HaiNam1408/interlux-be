@@ -113,24 +113,13 @@ export class ProductService {
         
         const orderBy = [{ sort: 'asc' } ,{ createdAt: 'desc' }];
         
-        const paginate = await this.pagination.paginate(
+        return await this.pagination.paginate(
             TableName.PRODUCT,
             { page, limit },
             where,
             select,
             orderBy
         );
-        
-        if (paginate.data && paginate.data.length > 0) {
-            paginate.data.forEach((item: Product) => {
-                if (item.images) {
-                    item.attributes = JSON.parse(item.attributes as string);
-                    item.images = JSON.parse(item.images as string);
-                }
-            });
-        }
-        
-        return paginate;
     }
 
     async findOne(id: number) {
@@ -141,14 +130,6 @@ export class ProductService {
 
         if (!product) {
             throw new HttpException('Product not found', 404);
-        }
-
-        if (product.images) {
-            product.images = JSON.parse(product.images as string);
-        }
-
-        if (product.attributes) {
-            product.attributes = JSON.parse(product.attributes as string);
         }
 
         return product;

@@ -9,12 +9,15 @@ import { ProductController } from './product/product.controller';
 import { VariationOptionController } from './variation/variation-option.controller';
 import { ProductVariationController } from './variation/product-variation.controller';
 import { VariationController } from './variation/variation.controller';
+import { CouponController } from './coupon/coupon.controller';
+import { CouponModule } from './coupon/coupon.module';
 
 @Module({
     imports: [
         CategoryModule,
         ProductModule,
-        VariationModule
+        VariationModule,
+        CouponModule
     ],
     providers: [
         JwtService,
@@ -25,7 +28,8 @@ import { VariationController } from './variation/variation.controller';
         ProductController,
         VariationController,
         VariationOptionController,
-        ProductVariationController
+        ProductVariationController,
+        CouponController
     ],
 })
 export class AdminModule { }

@@ -1,6 +1,18 @@
 import { PrismaClient } from '@prisma/client';
 import { slugify } from './utils/slugify';
 
+function convertToImageObjects(imageUrls: string[]) {
+    return imageUrls.map(url => {
+        const fileName = `product/${Date.now()}-${Math.random().toString(36).substring(2, 10)}.jpg`;
+
+        return {
+            fileName: fileName,
+            filePath: url,
+            type: 'image'
+        };
+    });
+}
+
 export async function seedProducts(prisma: PrismaClient) {
     // Delete existing data to avoid duplicates
     await prisma.productVariationOption.deleteMany({});
@@ -93,6 +105,8 @@ export async function seedProducts(prisma: PrismaClient) {
         ];
 
         for (const sofa of sofas) {
+            const productImages = convertToImageObjects(sofa.images);
+
             await prisma.product.create({
                 data: {
                     title: sofa.title,
@@ -102,7 +116,7 @@ export async function seedProducts(prisma: PrismaClient) {
                     percentOff: sofa.percentOff,
                     categoryId: sofa.categoryId,
                     attributes: sofa.attributes,
-                    images: sofa.images,
+                    images: productImages,
                     sort: sofa.sort,
                     status: sofa.status as any,
                 },
@@ -110,7 +124,6 @@ export async function seedProducts(prisma: PrismaClient) {
         }
     }
 
-    // Create bed products
     if (bedCategory) {
         const beds = [
             {
@@ -154,6 +167,8 @@ export async function seedProducts(prisma: PrismaClient) {
         ];
 
         for (const bed of beds) {
+            const productImages = convertToImageObjects(bed.images);
+
             await prisma.product.create({
                 data: {
                     title: bed.title,
@@ -163,7 +178,7 @@ export async function seedProducts(prisma: PrismaClient) {
                     percentOff: bed.percentOff,
                     categoryId: bed.categoryId,
                     attributes: bed.attributes,
-                    images: bed.images,
+                    images: productImages,
                     sort: bed.sort,
                     status: bed.status as any,
                 },
@@ -171,7 +186,6 @@ export async function seedProducts(prisma: PrismaClient) {
         }
     }
 
-    // Create dining table products
     if (diningTableCategory) {
         const diningTables = [
             {
@@ -216,6 +230,8 @@ export async function seedProducts(prisma: PrismaClient) {
         ];
 
         for (const table of diningTables) {
+            const productImages = convertToImageObjects(table.images);
+
             await prisma.product.create({
                 data: {
                     title: table.title,
@@ -225,7 +241,7 @@ export async function seedProducts(prisma: PrismaClient) {
                     percentOff: table.percentOff,
                     categoryId: table.categoryId,
                     attributes: table.attributes,
-                    images: table.images,
+                    images: productImages,
                     sort: table.sort,
                     status: table.status as any,
                 },
@@ -233,8 +249,12 @@ export async function seedProducts(prisma: PrismaClient) {
         }
     }
 
-    // Add 2 more products
     if (tvUnitCategory) {
+        const tvUnitImages = convertToImageObjects([
+            "https://example.com/images/manhattan-tv-unit-1.jpg",
+            "https://example.com/images/manhattan-tv-unit-2.jpg"
+        ]);
+
         await prisma.product.create({
             data: {
                 title: 'Manhattan TV Unit',
@@ -249,10 +269,7 @@ export async function seedProducts(prisma: PrismaClient) {
                     "Suitable TV size": "Up to 85 inches",
                     "Warranty": "2 years"
                 },
-                images: [
-                    "https://example.com/images/manhattan-tv-unit-1.jpg",
-                    "https://example.com/images/manhattan-tv-unit-2.jpg"
-                ],
+                images: tvUnitImages,
                 sort: 1,
                 status: 'ACTIVE',
             },
@@ -260,6 +277,11 @@ export async function seedProducts(prisma: PrismaClient) {
     }
 
     if (deskCategory) {
+        const deskImages = convertToImageObjects([
+            "https://example.com/images/executive-desk-1.jpg",
+            "https://example.com/images/executive-desk-2.jpg"
+        ]);
+
         await prisma.product.create({
             data: {
                 title: 'Executive Office Desk',
@@ -274,10 +296,7 @@ export async function seedProducts(prisma: PrismaClient) {
                     "Features": "Cable management, drawer storage",
                     "Warranty": "3 years"
                 },
-                images: [
-                    "https://example.com/images/executive-desk-1.jpg",
-                    "https://example.com/images/executive-desk-2.jpg"
-                ],
+                images: deskImages,
                 sort: 1,
                 status: 'ACTIVE',
             },

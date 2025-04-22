@@ -1,5 +1,45 @@
 import { PrismaClient } from '@prisma/client';
 
+// Helper function to ensure images are in the correct format
+function ensureImageFormat(images: any) {
+    // If images is already an array of objects with the correct structure, return as is
+    if (Array.isArray(images) &&
+        images.length > 0 &&
+        typeof images[0] === 'object' &&
+        'fileName' in images[0] &&
+        'filePath' in images[0] &&
+        'type' in images[0]) {
+        return images;
+    }
+
+    // If images is a string (JSON), parse it
+    if (typeof images === 'string') {
+        try {
+            const parsed = JSON.parse(images);
+            if (Array.isArray(parsed)) {
+                return parsed;
+            }
+        } catch (e) {
+            // If parsing fails, continue with other conversions
+        }
+    }
+
+    // If images is an array of strings (URLs), convert to objects
+    if (Array.isArray(images) && typeof images[0] === 'string') {
+        return images.map(url => {
+            const fileName = `product/${Date.now()}-${Math.random().toString(36).substring(2, 10)}.jpg`;
+            return {
+                fileName: fileName,
+                filePath: url,
+                type: 'image'
+            };
+        });
+    }
+
+    // Default: return empty array if images is invalid
+    return [];
+}
+
 export async function seedProductVariations(prisma: PrismaClient) {
     // Let's get all products
     const products = await prisma.product.findMany();
@@ -48,7 +88,7 @@ export async function seedProductVariations(prisma: PrismaClient) {
             price: product.price,
             percentOff: product.percentOff,
             inventory: 50,
-            images: product.images,
+            images: ensureImageFormat(product.images),
             isDefault: true,
             status: 'ACTIVE',
             options: []
@@ -63,7 +103,7 @@ export async function seedProductVariations(prisma: PrismaClient) {
                 price: product.price + (i * 50), // Increase price slightly for different colors
                 percentOff: product.percentOff,
                 inventory: 30,
-                images: product.images,
+                images: ensureImageFormat(product.images),
                 isDefault: false,
                 status: 'ACTIVE',
                 options: [{ variationOptionId: colorOption.id }]
@@ -81,7 +121,7 @@ export async function seedProductVariations(prisma: PrismaClient) {
                     price: product.price + 200 + (i * 100), // Premium for special materials
                     percentOff: Math.max(0, (product.percentOff || 0) - 5), // Less discount for premium variants
                     inventory: 15,
-                    images: product.images,
+                    images: ensureImageFormat(product.images),
                     isDefault: false,
                     status: 'ACTIVE',
                     options: [
@@ -108,7 +148,7 @@ export async function seedProductVariations(prisma: PrismaClient) {
                     price: product.price + priceAdjustment,
                     percentOff: product.percentOff,
                     inventory: sizeOption.slug.includes('small') ? 40 : 20,
-                    images: product.images,
+                    images: ensureImageFormat(product.images),
                     isDefault: false,
                     status: 'ACTIVE',
                     options: [{ variationOptionId: sizeOption.id }]
@@ -120,8 +160,14 @@ export async function seedProductVariations(prisma: PrismaClient) {
         for (const variation of variations) {
             const { options, ...variationData } = variation;
 
+            // Make sure images are not stringified again
+            const dataToCreate = {
+                ...variationData,
+                // Prisma will automatically handle the JSON serialization
+            };
+
             const createdVariation = await prisma.productVariation.create({
-                data: variationData
+                data: dataToCreate
             });
 
             // Create options for this variation
