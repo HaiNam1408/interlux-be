@@ -96,7 +96,7 @@ export class UpdateProductDto {
 
     @ApiProperty({
         required: false,
-        description: 'JSON string array of image filenames or URLs to delete',
+        description: 'Array of image objects to delete',
         example: [
             {
                 "fileName": "image1.jpg",
@@ -108,7 +108,6 @@ export class UpdateProductDto {
             }
         ],
     })
-    @IsString()
     @IsOptional()
     imagesToDelete?: object[];
 

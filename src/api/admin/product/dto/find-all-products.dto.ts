@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { ProductStatus } from '@prisma/client';
-import { IsEnum, IsInt, IsOptional, IsString } from 'class-validator';
+import { IsEnum, IsInt, IsOptional, IsString, IsBoolean } from 'class-validator';
 import { Transform } from 'class-transformer';
 
 export class FindAllProductsDto {
@@ -34,4 +34,13 @@ export class FindAllProductsDto {
     @IsString()
     @IsOptional()
     search?: string;
+
+    @ApiPropertyOptional({
+        description: 'Include inactive (deleted) products',
+        default: false
+    })
+    @IsBoolean()
+    @IsOptional()
+    @Transform(({ value }) => value === 'true' || value === true)
+    includeInactive?: boolean = false;
 }

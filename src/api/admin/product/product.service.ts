@@ -3,7 +3,7 @@ import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { FilesService } from 'src/services/file/file.service';
 import { PrismaService } from 'src/prisma.service';
-import { Product, ProductStatus } from '@prisma/client';
+import { Product, ProductStatus, CommonStatus } from '@prisma/client';
 import { SlugUtil } from 'src/utils/createSlug.util';
 import { PaginationService } from 'src/utils/pagination.util';
 import { TableName } from 'src/common/enums/table.enum';
@@ -37,8 +37,8 @@ export class ProductService {
             throw new Error('Slug already exists');
         }
 
-        let uploadedImages;
-        if (images || images.length === 0) {
+        let uploadedImages = [];
+        if (images && images.length > 0) {
             uploadedImages = await Promise.all(
                 images.map((image) =>
                     this.filesService.uploadFile(
@@ -51,6 +51,9 @@ export class ProductService {
             );
         }
 
+        const attributes = typeof createProductDto.attributes === 'string'
+            ? JSON.parse(createProductDto.attributes as string)
+            : createProductDto.attributes;
 
         const newProduct = await this.prisma.product.create({
             data: {
@@ -59,9 +62,9 @@ export class ProductService {
                 description: createProductDto.description,
                 price: createProductDto.price,
                 percentOff: createProductDto.percentOff,
-                attributes: createProductDto.attributes,
+                attributes: attributes,
                 categoryId: createProductDto.categoryId,
-                images: JSON.stringify(uploadedImages),
+                images: uploadedImages,
                 sort: createProductDto.sort,
                 status: createProductDto.status || ProductStatus.DRAFT,
             }
@@ -71,29 +74,32 @@ export class ProductService {
     }
 
     async findAll(
-        page: number = 1, 
-        limit: number = 10, 
-        status?: ProductStatus, 
-        categoryId?: number, 
-        search?: string
+        page: number = 1,
+        limit: number = 10,
+        status?: ProductStatus,
+        categoryId?: number,
+        search?: string,
+        includeInactive: boolean = false
     ): Promise<any> {
         const where = {};
-        
+
         if (status) {
-            where['status'] = status;
+            where['status'] = {status};
+        } else if (!includeInactive) {
+            where['status'] = { not: ProductStatus.INACTIVE };
         }
-        
+
         if (categoryId) {
             where['categoryId'] = categoryId;
         }
-        
+
         if (search) {
             where['OR'] = [
                 { title: { contains: search } },
                 { description: { contains: search } }
             ];
         }
-        
+
         const select = {
             id: true,
             title: true,
@@ -110,9 +116,9 @@ export class ProductService {
             categoryId: true,
             category: true
         };
-        
+
         const orderBy = [{ sort: 'asc' } ,{ createdAt: 'desc' }];
-        
+
         return await this.pagination.paginate(
             TableName.PRODUCT,
             { page, limit },
@@ -122,10 +128,15 @@ export class ProductService {
         );
     }
 
-    async findOne(id: number) {
+    async findOne(id: number, includeInactive: boolean = false) {
         const product = await this.prisma.product.findUnique({
-            where: { id },
-            include: { category: true },
+            where: { id, status: { not: ProductStatus.INACTIVE } },
+            include: {
+                category: true,
+                variations: {
+                    where: includeInactive ? {} : { status: CommonStatus.ACTIVE }
+                }
+            },
         });
 
         if (!product) {
@@ -141,14 +152,13 @@ export class ProductService {
         newImages?: Express.Multer.File[],
     ) {
         const product = await this.prisma.product.findUnique({
-            where: { id },
+            where: { id, status: { not: ProductStatus.INACTIVE } },
         });
 
         if (!product) {
             throw new Error('Product not found');
         }
 
-        // Check if category exists when updating
         if (updateProductDto.categoryId) {
             const category = await this.prisma.category.findFirst({
                 where: { id: updateProductDto.categoryId },
@@ -159,7 +169,6 @@ export class ProductService {
             }
         }
 
-        // Check slug uniqueness if updating title
         const newSlug = updateProductDto.title
             ? SlugUtil.createSlug(updateProductDto.title)
             : product.slug;
@@ -177,26 +186,44 @@ export class ProductService {
             }
         }
 
-        // Handle image updates
-        const imagesToDelete = updateProductDto.imagesToDelete ?? [];
-        let currentImages = product.images ? JSON.parse(product.images as string) : [];
+        const imagesToDelete = JSON.parse(updateProductDto.imagesToDelete.toString()) ?? [];
 
-        // Handle deleting specific images if requested
-        if (imagesToDelete && imagesToDelete.length > 0) {
-            const imagesToRemove = currentImages.filter(img =>
-                imagesToDelete.includes(img.fileName) || imagesToDelete.includes(img.url)
-            );
-
-            await Promise.all(
-                imagesToRemove.map(image => this.filesService.deletePublicFile(image.fileName))
-            );
-
-            currentImages = currentImages.filter(img =>
-                !imagesToDelete.includes(img.fileName) && !imagesToDelete.includes(img.url)
-            );
+        let currentImages = [];
+        if (product.images) {
+            currentImages = typeof product.images === 'string'
+                ? JSON.parse(product.images as string)
+                : product.images as any[];
         }
 
-        // Handle uploading new images if provided
+        if (imagesToDelete && imagesToDelete.length > 0) {
+            try {
+                const fileNamesToDelete = imagesToDelete.map(img =>
+                    typeof img === 'string' ? img : (img as any).fileName
+                ).filter(Boolean);
+                const imagesToRemove = currentImages.filter(img =>
+                    fileNamesToDelete.includes(img.fileName)
+                );
+
+                if (imagesToRemove.length > 0) {
+                    for (const image of imagesToRemove) {
+                        if (image && image.fileName) {
+                            try {
+                                await this.filesService.deletePublicFile(image.fileName);
+                            } catch (error) {
+                                console.error(`Failed to delete file ${image.fileName}:`, error);
+                            }
+                        }
+                    }
+                }
+
+                currentImages = currentImages.filter(img =>
+                    !fileNamesToDelete.includes(img.fileName)
+                );
+            } catch (error) {
+                console.error('Error while deleting product images during update:', error);
+            }
+        }
+
         if (newImages && newImages.length > 0) {
             const uploadedImages = await Promise.all(
                 newImages.map(image =>
@@ -212,7 +239,13 @@ export class ProductService {
             currentImages = [...currentImages, ...uploadedImages];
         }
 
-        const imageData = JSON.stringify(currentImages);
+        let attributes = undefined;
+        if (updateProductDto.attributes !== undefined) {
+            attributes = typeof updateProductDto.attributes === 'string'
+                ? JSON.parse(updateProductDto.attributes as string)
+                : updateProductDto.attributes;
+        }
+
         const updatedProduct = await this.prisma.product.update({
             where: { id },
             data: {
@@ -221,11 +254,11 @@ export class ProductService {
                 description: updateProductDto.description !== undefined ? updateProductDto.description : undefined,
                 price: updateProductDto.price !== undefined ? updateProductDto.price : undefined,
                 percentOff: updateProductDto.percentOff !== undefined ? updateProductDto.percentOff : undefined,
-                attributes: updateProductDto.attributes !== undefined ? updateProductDto.attributes : undefined,
+                attributes: attributes,
                 categoryId: updateProductDto.categoryId !== undefined ? updateProductDto.categoryId : undefined,
                 sort: updateProductDto.sort !== undefined ? updateProductDto.sort : undefined,
                 status: updateProductDto.status !== undefined ? updateProductDto.status : undefined,
-                images: imageData,
+                images: currentImages,
             },
         });
 
@@ -250,21 +283,50 @@ export class ProductService {
     async remove(id: number): Promise<void> {
         const product = await this.prisma.product.findUnique({
             where: { id },
+            include: {
+                variations: true,
+                cartItems: true
+            },
         });
 
         if (!product) {
             throw new Error('Product not found');
         }
 
-        if (product.images) {
-            const images = JSON.parse(product.images as string);
-            await Promise.all(
-                images.map((image) => this.filesService.deletePublicFile(image.fileName)),
-            );
-        }
+        await this.prisma.$transaction(async (prisma) => {
+            if (product.variations && product.variations.length > 0) {
+                for (const variation of product.variations) {
+                    await prisma.productVariation.update({
+                        where: { id: variation.id },
+                        data: {
+                            status: CommonStatus.INACTIVE
+                        }
+                    });
+                }
+            }
 
-        await this.prisma.product.delete({
-            where: { id },
+            if (product.cartItems && product.cartItems.length > 0) {
+                await prisma.cartItem.deleteMany({
+                    where: { productId: id }
+                });
+            }
+
+            const currentAttributes = product.attributes || {};
+            const updatedAttributes = {
+                ...(typeof currentAttributes === 'object' ? currentAttributes : {}),
+                _deleted: {
+                    deletedAt: new Date().toISOString(),
+                    reason: 'User deleted'
+                }
+            };
+
+            await prisma.product.update({
+                where: { id },
+                data: {
+                    status: ProductStatus.INACTIVE,
+                    attributes: updatedAttributes
+                }
+            });
         });
     }
 }

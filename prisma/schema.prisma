@@ -22,6 +22,7 @@ model User {
 
   carts        Cart[]
   orders       Order[]
+  notifications Notification[]
 }
 
 model Category {
@@ -238,7 +239,23 @@ model Coupon {
   orders          Order[]
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
-	@@map("Coupon")
+  @@map("Coupon")
+}
+
+model Notification {
+  id              Int                @id @default(autoincrement())
+  userId          Int
+  user            User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title           String
+  content         String
+  type            NotificationType   @default(SYSTEM)
+  relatedId       Int?
+  relatedType     String?
+  isRead          Boolean            @default(false)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  @@index([userId])
 }
 
 enum ProductStatus {
@@ -257,7 +274,6 @@ enum Role {
   USER
   ADMIN
 }
-
 
 enum OrderStatus {
   PENDING
@@ -292,4 +308,14 @@ enum PaymentStatus {
 enum CouponType {
   PERCENTAGE
   FIXED_AMOUNT
+}
+
+enum NotificationType {
+  SYSTEM
+  ORDER
+  PAYMENT
+  SHIPPING
+  PROMOTION
+  PRODUCT
+  OTHER
 }

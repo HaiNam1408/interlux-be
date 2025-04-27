@@ -70,7 +70,7 @@ export class ProductController {
     @Get()
     async findAll(@Query() findAllProductsDto: FindAllProductsDto): Promise<ApiResponse<any>> {
         try {
-            const { page, limit, status, categoryId, search } = findAllProductsDto;
+            const { page, limit, status, categoryId, search, includeInactive } = findAllProductsDto;
 
             const result = await this.productService.findAll(
                 page,
@@ -78,6 +78,7 @@ export class ProductController {
                 status,
                 categoryId,
                 search,
+                includeInactive
             );
 
             return new ApiResponse(
@@ -92,9 +93,17 @@ export class ProductController {
 
     @ApiOperation({ summary: 'Get product by ID' })
     @Get(':id')
-    async findOne(@Param('id', ParseIntPipe) id: number): Promise<ApiResponse<any>> {
+    async findOne(
+        @Param('id', ParseIntPipe) id: number,
+        @Query('includeInactive') includeInactive?: string
+    ): Promise<ApiResponse<any>> {
         try {
-            const result = await this.productService.findOne(id);
+            const showInactive = includeInactive === 'true';
+
+            const result = await this.productService.findOne(
+                id,
+                showInactive
+            );
 
             return new ApiResponse(
                 'Product retrieved successfully',
