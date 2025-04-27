@@ -3,12 +3,14 @@ import { PrismaService } from '../../../prisma.service';
 import { VerifyPaymentDto } from './dto';
 import { OrderStatus, PaymentStatus } from '@prisma/client';
 import { PaymentStrategyFactory } from './strategies';
+import { NotificationService } from 'src/services/notification/notification.service';
 
 @Injectable()
 export class PaymentService {
     constructor(
         private prisma: PrismaService,
-        private paymentStrategyFactory: PaymentStrategyFactory
+        private paymentStrategyFactory: PaymentStrategyFactory,
+        private notificationService: NotificationService
     ) { }
 
     async getPaymentDetail(userId: number, paymentId: number) {
@@ -182,6 +184,19 @@ export class PaymentService {
                     where: { id: order.id },
                     data: { status: OrderStatus.CONFIRMED },
                 });
+
+                // Send payment success notification
+                await this.notificationService.createFromTemplate(
+                    order.userId,
+                    'PAYMENT_RECEIVED',
+                    {
+                        orderNumber: order.orderNumber,
+                        amount: order.payment.amount,
+                        currency: 'VND'
+                    },
+                    order.id,
+                    'Order'
+                );
             } else {
                 // Update payment status to failed
                 await this.prisma.payment.update({
@@ -192,6 +207,18 @@ export class PaymentService {
                         metadata: result.metadata,
                     },
                 });
+
+                // Send payment failed notification
+                await this.notificationService.createFromTemplate(
+                    order.userId,
+                    'PAYMENT_FAILED',
+                    {
+                        orderNumber: order.orderNumber,
+                        reason: result.message || 'Payment processing failed'
+                    },
+                    order.id,
+                    'Order'
+                );
             }
 
             return result;

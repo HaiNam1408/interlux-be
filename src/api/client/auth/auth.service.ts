@@ -18,6 +18,7 @@ import { Cache } from 'cache-manager';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { renderTemplate } from 'src/utils/template.util';
+import { NotificationService } from 'src/services/notification/notification.service';
 
 @Injectable()
 export class AuthService {
@@ -25,6 +26,7 @@ export class AuthService {
         private prisma: PrismaService,
         private jwtService: JwtService,
         private mailService: MailService,
+        private notificationService: NotificationService,
         @Inject(CACHE_MANAGER) private cacheService: Cache
     ) { console.log(cacheService.stores); }
 
@@ -112,8 +114,15 @@ export class AuthService {
         }
 
         if (!error && userData) {
-            await this.prisma.user.create({ data: userData });
+            const newUser = await this.prisma.user.create({ data: userData });
             await this.cacheService.del(`register:${email}`);
+
+            // Send welcome notification
+            await this.notificationService.createFromTemplate(
+                newUser.id,
+                'ACCOUNT_CREATED',
+                { username: newUser.username || newUser.email }
+            );
         }
 
         const data = {
@@ -244,10 +253,17 @@ export class AuthService {
             }
 
             const hashedPassword = await bcrypt.hash(dto.newPassword, 10);
-            await this.prisma.user.update({
+            const updatedUser = await this.prisma.user.update({
                 where: { email: dto.email },
                 data: { password: hashedPassword },
             });
+
+            // Send password changed notification
+            await this.notificationService.createFromTemplate(
+                updatedUser.id,
+                'PASSWORD_CHANGED',
+                { username: updatedUser.username || updatedUser.email }
+            );
 
             const html = await renderTemplate('reset-password.ejs', {
                 success: 'Password reset successfully, you can now log in with your new password.'

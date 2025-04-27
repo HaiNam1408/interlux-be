@@ -11,9 +11,11 @@ import {
   PayPalStrategy,
   CodStrategy
 } from './strategies';
+import { NotificationModule } from 'src/services/notification/notification.module';
+import { NotificationService } from 'src/services/notification';
 
 @Module({
-  imports: [ConfigModule],
+  imports: [ConfigModule, NotificationModule],
   controllers: [PaymentController],
   providers: [
     PaymentService,
@@ -24,7 +26,8 @@ import {
     VNPayStrategy,
     MomoStrategy,
     PayPalStrategy,
-    CodStrategy
+    CodStrategy,
+    NotificationService
   ],
   exports: [PaymentService],
 })

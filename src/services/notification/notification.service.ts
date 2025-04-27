@@ -69,20 +69,24 @@ export class NotificationService {
    * @param userId User ID
    * @param page Page number
    * @param limit Items per page
+   * @param where Additional filter conditions
    * @returns Paginated notifications
    */
-  async getNotificationsForUser(userId: number, page = 1, limit = 10) {
+  async getNotificationsForUser(userId: number, page = 1, limit = 10, where: any = {}) {
     const skip = (page - 1) * limit;
+
+    // Merge userId with additional where conditions
+    const whereCondition = { userId, ...where };
 
     const [notifications, total] = await Promise.all([
       this.prisma.notification.findMany({
-        where: { userId },
+        where: whereCondition,
         orderBy: { createdAt: 'desc' },
         skip,
         take: limit,
       }),
       this.prisma.notification.count({
-        where: { userId },
+        where: whereCondition,
       }),
     ]);
 

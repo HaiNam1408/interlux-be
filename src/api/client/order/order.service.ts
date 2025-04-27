@@ -4,12 +4,14 @@ import { PrismaService } from '../../../prisma.service';
 import { CreateOrderDto } from './dto';
 import { CartService } from '../cart/cart.service';
 import { OrderStatus, PaymentMethod, PaymentStatus } from '@prisma/client';
+import { NotificationService } from 'src/services/notification/notification.service';
 
 @Injectable()
 export class OrderService {
     constructor(
         private prisma: PrismaService,
         private cartService: CartService,
+        private notificationService: NotificationService,
     ) { }
 
     async createOrder(userId: number, createOrderDto: CreateOrderDto) {
@@ -251,6 +253,19 @@ export class OrderService {
         // Clear cart after successful order creation
         await this.cartService.clearCart(userId);
 
+        // Send order created notification
+        await this.notificationService.createFromTemplate(
+            userId,
+            'ORDER_CREATED',
+            {
+                orderNumber: order.orderNumber,
+                total: order.total,
+                currency: 'VND'
+            },
+            order.id,
+            'Order'
+        );
+
         return order;
     }
 
@@ -406,6 +421,7 @@ export class OrderService {
                 payment: true,
                 shipping: true,
                 coupon: true,
+                user: true,
             },
         });
 
@@ -423,6 +439,66 @@ export class OrderService {
                 break;
             default:
                 paymentStatus = PaymentStatus.PROCESSING;
+        }
+
+        // Send notification based on the new status
+        if (updatedOrder.user) {
+            const userId = updatedOrder.user.id;
+
+            switch (status) {
+                case OrderStatus.PROCESSING:
+                    await this.notificationService.createFromTemplate(
+                        userId,
+                        'ORDER_CONFIRMED',
+                        { orderNumber: updatedOrder.orderNumber },
+                        orderId,
+                        'Order'
+                    );
+                    break;
+                case OrderStatus.SHIPPED:
+                    await this.notificationService.createFromTemplate(
+                        userId,
+                        'ORDER_SHIPPED',
+                        { orderNumber: updatedOrder.orderNumber },
+                        orderId,
+                        'Order'
+                    );
+                    break;
+                case OrderStatus.COMPLETED:
+                    await this.notificationService.createFromTemplate(
+                        userId,
+                        'ORDER_DELIVERED',
+                        { orderNumber: updatedOrder.orderNumber },
+                        orderId,
+                        'Order'
+                    );
+                    break;
+                case OrderStatus.CANCELLED:
+                    await this.notificationService.createFromTemplate(
+                        userId,
+                        'ORDER_CANCELLED',
+                        {
+                            orderNumber: updatedOrder.orderNumber,
+                            reason: 'Order cancelled by admin'
+                        },
+                        orderId,
+                        'Order'
+                    );
+                    break;
+                case OrderStatus.REFUNDED:
+                    await this.notificationService.createFromTemplate(
+                        userId,
+                        'PAYMENT_REFUNDED',
+                        {
+                            orderNumber: updatedOrder.orderNumber,
+                            amount: updatedOrder.total,
+                            currency: 'VND'
+                        },
+                        orderId,
+                        'Order'
+                    );
+                    break;
+            }
         }
 
         await this.prisma.payment.update({

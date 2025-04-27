@@ -17,6 +17,9 @@ import { ProductClientModule } from './product/product.module';
 import { ProductClientController } from './product/product.controller';
 import { PaginationService } from 'src/utils/pagination.util';
 import { CategoryClientModule } from './category/category.module';
+import { NotificationModule } from './notification/notification.module';
+import { NotificationController } from './notification/notification.controller';
+import { NotificationService, NotificationTemplateService } from 'src/services/notification';
 
 @Module({
     imports: [
@@ -27,22 +30,25 @@ import { CategoryClientModule } from './category/category.module';
         PaymentModule,
         CouponModule,
         ProductClientModule,
+        NotificationModule,
     ],
     providers: [
         JwtService,
         PrismaService,
         ProductClientService,
-        PaginationService
+        PaginationService,
+        NotificationService,
+        NotificationTemplateService
     ],
     controllers: [
-        AuthController, 
+        AuthController,
         CategoryClientController,
         ProductClientController,
         CartController,
         OrderController,
         CouponController,
         PaymentController,
+        NotificationController,
     ],
 })
 export class ClientModule { }
- 
