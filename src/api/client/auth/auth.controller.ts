@@ -17,21 +17,6 @@ import { renderTemplate } from 'src/utils/template.util';
 export class AuthController {
     constructor(private authService: AuthService) { }
 
-    @ApiOperation({ summary: 'Test Redis connection' })
-    @Get('test-redis')
-    async test(): Promise<any> {
-        try {
-            let abc = await this.authService.test();
-            return {
-                message: abc
-            }
-        } catch (error) {
-            throw error instanceof HttpException
-                ? error
-                : new HttpException(error.message, HttpStatus.INTERNAL_SERVER_ERROR);
-        }
-    }
-
     @ApiOperation({ summary: 'Register a new user' })
     @UseInterceptors(CacheInterceptor)
     @Post('register')

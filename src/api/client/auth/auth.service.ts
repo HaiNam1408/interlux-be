@@ -28,7 +28,7 @@ export class AuthService {
         private mailService: MailService,
         private notificationService: NotificationService,
         @Inject(CACHE_MANAGER) private cacheService: Cache
-    ) { console.log(cacheService.stores); }
+    ) {}
 
     // Generate Access Token & Refresh Token
     private async generateTokens(userId: string, email: string, role: string) {
@@ -53,18 +53,6 @@ export class AuthService {
         });
 
         return { accessToken, refreshToken };
-    }
-
-    async test() {
-        console.log('===> START CACHE');
-        let abc = await this.cacheService.get('abc');
-        if (!abc) {
-            await this.cacheService.set(`abc`, 'Hello');
-            console.log('--------------> RECACHE');
-            return abc;
-        }
-        console.log('===> END CACHE');
-        return abc;
     }
 
     async register(dto: RegisterDto) {
