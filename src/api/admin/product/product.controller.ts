@@ -94,16 +94,10 @@ export class ProductController {
     @ApiOperation({ summary: 'Get product by ID' })
     @Get(':id')
     async findOne(
-        @Param('id', ParseIntPipe) id: number,
-        @Query('includeInactive') includeInactive?: string
+        @Param('id', ParseIntPipe) id: number
     ): Promise<ApiResponse<any>> {
         try {
-            const showInactive = includeInactive === 'true';
-
-            const result = await this.productService.findOne(
-                id,
-                showInactive
-            );
+            const result = await this.productService.findOne(id);
 
             return new ApiResponse(
                 'Product retrieved successfully',

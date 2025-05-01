@@ -79,7 +79,7 @@ export class ProductVariationService {
                 price: createProductVariationDto.price,
                 percentOff: createProductVariationDto.percentOff,
                 inventory: createProductVariationDto.inventory || 0,
-                images: uploadedImages ? JSON.stringify(uploadedImages) : null,
+                images: uploadedImages,
                 isDefault: createProductVariationDto.isDefault || false,
                 status: createProductVariationDto.status || CommonStatus.ACTIVE,
             },
@@ -126,13 +126,7 @@ export class ProductVariationService {
             orderBy: [{ isDefault: 'desc' }, { createdAt: 'asc' }],
         });
 
-        // Process image JSON data
-        return productVariations.map(variation => {
-            if (variation.images) {
-                variation.images = JSON.parse(variation.images as string);
-            }
-            return variation;
-        });
+        return productVariations;
     }
 
     async findOne(productId: number, id: number): Promise<any> {
@@ -156,11 +150,6 @@ export class ProductVariationService {
 
         if (!productVariation) {
             throw new HttpException('Product variation not found', HttpStatus.NOT_FOUND);
-        }
-
-        // Parse images JSON
-        if (productVariation.images) {
-            productVariation.images = JSON.parse(productVariation.images as string);
         }
 
         return productVariation;
@@ -232,7 +221,7 @@ export class ProductVariationService {
                 price: updateProductVariationDto.price,
                 percentOff: updateProductVariationDto.percentOff,
                 inventory: updateProductVariationDto.inventory,
-                images: uploadedImages ? JSON.stringify(uploadedImages) : undefined,
+                images: uploadedImages,
                 isDefault: updateProductVariationDto.isDefault,
                 status: updateProductVariationDto.status,
             },

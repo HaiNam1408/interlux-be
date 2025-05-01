@@ -128,13 +128,38 @@ export class ProductService {
         );
     }
 
-    async findOne(id: number, includeInactive: boolean = false) {
+    async findOne(id: number) {
         const product = await this.prisma.product.findUnique({
             where: { id, status: { not: ProductStatus.INACTIVE } },
             include: {
-                category: true,
+                category: {
+                    select: {
+                        id: true,
+                        name: true,
+                        slug: true
+                    },
+                },
                 variations: {
-                    where: includeInactive ? {} : { status: CommonStatus.ACTIVE }
+                    include: {
+                        options: {
+                            select: {
+                                id: true,
+                                variationOption: {
+                                    select: {
+                                        id: true,
+                                        name: true,
+                                        value: true,
+                                        variation: {
+                                            select: {
+                                                id: true,
+                                                name: true,
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
                 }
             },
         });
@@ -186,43 +211,47 @@ export class ProductService {
             }
         }
 
-        const imagesToDelete = JSON.parse(updateProductDto.imagesToDelete.toString()) ?? [];
-
         let currentImages = [];
-        if (product.images) {
-            currentImages = typeof product.images === 'string'
-                ? JSON.parse(product.images as string)
-                : product.images as any[];
-        }
-
-        if (imagesToDelete && imagesToDelete.length > 0) {
-            try {
-                const fileNamesToDelete = imagesToDelete.map(img =>
-                    typeof img === 'string' ? img : (img as any).fileName
-                ).filter(Boolean);
-                const imagesToRemove = currentImages.filter(img =>
-                    fileNamesToDelete.includes(img.fileName)
-                );
-
-                if (imagesToRemove.length > 0) {
-                    for (const image of imagesToRemove) {
-                        if (image && image.fileName) {
-                            try {
-                                await this.filesService.deletePublicFile(image.fileName);
-                            } catch (error) {
-                                console.error(`Failed to delete file ${image.fileName}:`, error);
+        if (updateProductDto.imagesToDelete) {
+            const imagesToDelete = JSON.parse(updateProductDto.imagesToDelete.toString()) ?? [];
+    
+            if (product.images) {
+                currentImages = typeof product.images === 'string'
+                    ? JSON.parse(product.images as string)
+                    : product.images as any[];
+            }
+    
+            if (imagesToDelete && imagesToDelete.length > 0) {
+                try {
+                    const fileNamesToDelete = imagesToDelete.map(img =>
+                        typeof img === 'string' ? img : (img as any).fileName
+                    ).filter(Boolean);
+                    const imagesToRemove = currentImages.filter(img =>
+                        fileNamesToDelete.includes(img.fileName)
+                    );
+    
+                    if (imagesToRemove.length > 0) {
+                        for (const image of imagesToRemove) {
+                            if (image && image.fileName) {
+                                try {
+                                    await this.filesService.deletePublicFile(image.fileName);
+                                } catch (error) {
+                                    console.error(`Failed to delete file ${image.fileName}:`, error);
+                                }
                             }
                         }
                     }
+    
+                    currentImages = currentImages.filter(img =>
+                        !fileNamesToDelete.includes(img.fileName)
+                    );
+                } catch (error) {
+                    console.error('Error while deleting product images during update:', error);
                 }
-
-                currentImages = currentImages.filter(img =>
-                    !fileNamesToDelete.includes(img.fileName)
-                );
-            } catch (error) {
-                console.error('Error while deleting product images during update:', error);
             }
+
         }
+
 
         if (newImages && newImages.length > 0) {
             const uploadedImages = await Promise.all(

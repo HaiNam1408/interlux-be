@@ -49,6 +49,7 @@ export class CreateProductVariationDto {
     status?: CommonStatus;
 
     @ApiProperty({ description: 'option product variation', type: [CreateProductVariationOptionDto] })
+    @Transform(({ value }) => typeof value === 'string' ? JSON.parse(value) : value)
     @IsArray()
     @ValidateNested({ each: true })
     @ArrayMinSize(1)
