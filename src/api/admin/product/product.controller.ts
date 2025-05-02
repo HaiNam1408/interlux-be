@@ -25,7 +25,7 @@ import ApiResponse from 'src/global/api.response';
 import { resError } from 'src/global/handleError.global';
 
 @ApiBearerAuth()
-@ApiTags('product')
+@ApiTags('Admin - Product')
 @Controller('product')
 export class ProductController {
     constructor(

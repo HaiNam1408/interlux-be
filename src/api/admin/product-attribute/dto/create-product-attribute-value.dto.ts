@@ -5,17 +5,18 @@ import {
     IsOptional,
     IsInt,
     IsEnum,
-    IsArray,
-    ValidateNested,
-    ArrayMinSize,
 } from 'class-validator';
-import { Transform, Type } from 'class-transformer';
-import { CreateVariationOptionDto } from './create-variation-option.dto';
+import { Transform } from 'class-transformer';
 
-export class CreateVariationDto {
-    @ApiProperty({ description: 'Variation name' })
+export class CreateProductAttributeValueDto {
+    @ApiProperty({ description: 'Attribute value name' })
     @IsString()
     name: string;
+
+    @ApiPropertyOptional({ description: 'Attribute value' })
+    @IsString()
+    @IsOptional()
+    value?: string;
 
     @ApiPropertyOptional({ description: 'Sort order' })
     @IsInt()
@@ -24,18 +25,11 @@ export class CreateVariationDto {
     sort?: number;
 
     @ApiPropertyOptional({
-        description: 'Variation status',
+        description: 'Value status',
         enum: CommonStatus,
         default: CommonStatus.ACTIVE,
     })
     @IsEnum(CommonStatus)
     @IsOptional()
     status?: CommonStatus;
-
-    @ApiProperty({ description: 'Variation options', type: [CreateVariationOptionDto] })
-    @IsArray()
-    @ValidateNested({ each: true })
-    @ArrayMinSize(1)
-    @Type(() => CreateVariationOptionDto)
-    options: CreateVariationOptionDto[];
 }

@@ -15,7 +15,7 @@ import { CreateOrderDto } from './dto';
 import { AuthGuard } from 'src/common/guards/auth.guard';
 import ApiResponse from 'src/global/api.response';
 
-@ApiTags('Order')
+@ApiTags('Client - Order')
 @Controller('order')
 @UseGuards(AuthGuard)
 @ApiBearerAuth()

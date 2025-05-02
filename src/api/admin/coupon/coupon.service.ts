@@ -4,12 +4,14 @@ import { CreateCouponDto, UpdateCouponDto } from './dto';
 import { PaginationService } from 'src/utils/pagination.util';
 import { TableName } from 'src/common/enums/table.enum';
 import { CommonStatus } from '@prisma/client';
+import { NotificationService } from 'src/services/notification/notification.service';
 
 @Injectable()
 export class CouponService {
     constructor(
         private readonly prismaService: PrismaService,
-        private readonly pagination: PaginationService
+        private readonly pagination: PaginationService,
+        private readonly notificationService: NotificationService
     ) { }
 
     async findAll(page: number = 1, limit: number = 10, status?: CommonStatus): Promise<any> {

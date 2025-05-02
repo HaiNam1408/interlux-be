@@ -86,12 +86,10 @@ export class ProductClientService {
             id: true,
             title: true,
             slug: true,
-            description: true,
             price: true,
             percentOff: true,
             sold: true,
             images: true,
-            attributes: true,
             category: {
                 select: {
                     id: true,
@@ -133,13 +131,19 @@ export class ProductClientService {
         return paginate;
     }
 
-    async findBySlug(slug: string): Promise<any> {
+    async findBySlug(id: number): Promise<any> {
         const product = await this.prisma.product.findUnique({
-            where: {
-                slug,
-                status: ProductStatus.ACTIVE,
-            },
-            include: {
+            where: { id, status: ProductStatus.ACTIVE },
+            select: {
+                id: true,
+                title: true,
+                slug: true,
+                description: true,
+                price: true,
+                percentOff: true,
+                sold: true,
+                images: true,
+                attributes: true,
                 category: {
                     select: {
                         id: true,
@@ -154,20 +158,52 @@ export class ProductClientService {
                         },
                     },
                 },
+                productAttributes: {
+                    select: {
+                        id: true,
+                        name: true,
+                        slug: true,
+                        values: {
+                            select: {
+                                id: true,
+                                name: true,
+                                value: true,
+                                slug: true
+                            }
+                        }
+                    }
+                },
                 variations: {
                     where: { status: 'ACTIVE' },
-                    include: {
-                        options: {
-                            include: {
-                                variationOption: {
-                                    include: {
-                                        variation: true,
-                                    },
-                                },
-                            },
-                        },
+                    select: {
+                        id: true,
+                        sku: true,
+                        price: true,
+                        percentOff: true,
+                        inventory: true,
+                        images: true,
+                        isDefault: true,
+                        attributeValues: {
+                            select: {
+                                attributeValue: {
+                                    select: {
+                                        id: true,
+                                        name: true,
+                                        value: true,
+                                        attribute: {
+                                            select: {
+                                                id: true,
+                                                name: true
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     },
                 },
+                createdAt: true,
+                updatedAt: true
             },
         });
 
@@ -303,7 +339,7 @@ export class ProductClientService {
         }
 
         // Tạo mảng ID của danh mục và tất cả danh mục con
-        const categoryIds = [category.id, ...category.children.map(child => child.id)];
+        const categoryIds = [category.id, ...category.children.map((child: any) => child.id)];
 
         // Gọi lại hàm findAll với categoryIds
         const {
@@ -336,16 +372,31 @@ export class ProductClientService {
                 productId,
                 status: 'ACTIVE',
             },
-            include: {
-                options: {
-                    include: {
-                        variationOption: {
-                            include: {
-                                variation: true,
-                            },
-                        },
-                    },
-                },
+            select: {
+                id: true,
+                sku: true,
+                price: true,
+                percentOff: true,
+                inventory: true,
+                images: true,
+                isDefault: true,
+                attributeValues: {
+                    select: {
+                        attributeValue: {
+                            select: {
+                                id: true,
+                                name: true,
+                                value: true,
+                                attribute: {
+                                    select: {
+                                        id: true,
+                                        name: true
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             },
         });
 
@@ -362,17 +413,38 @@ export class ProductClientService {
                 sku,
                 status: 'ACTIVE',
             },
-            include: {
-                product: true,
-                options: {
-                    include: {
-                        variationOption: {
-                            include: {
-                                variation: true,
-                            },
-                        },
-                    },
+            select: {
+                id: true,
+                sku: true,
+                price: true,
+                percentOff: true,
+                inventory: true,
+                images: true,
+                isDefault: true,
+                product: {
+                    select: {
+                        id: true,
+                        title: true,
+                        slug: true
+                    }
                 },
+                attributeValues: {
+                    select: {
+                        attributeValue: {
+                            select: {
+                                id: true,
+                                name: true,
+                                value: true,
+                                attribute: {
+                                    select: {
+                                        id: true,
+                                        name: true
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             },
         });
 
@@ -481,7 +553,7 @@ export class ProductClientService {
 
         // Transform variations if they exist
         if (transformed.variations) {
-            transformed.variations = transformed.variations.map(variation =>
+            transformed.variations = transformed.variations.map((variation: any) =>
                 this.transformVariationData(variation)
             );
         }
@@ -506,30 +578,31 @@ export class ProductClientService {
                 : transformed.images;
         }
 
-        // Group options by variation
-        if (transformed.options) {
-            const groupedOptions = {};
+        // Group attribute values by attribute
+        if (transformed.attributeValues) {
+            const groupedAttributes = {};
 
-            transformed.options.forEach(option => {
-                const variationName = option.variationOption.variation.name;
+            transformed.attributeValues.forEach((av: any) => {
+                const attribute = av.attributeValue.attribute;
+                const attributeName = attribute.name;
 
-                if (!groupedOptions[variationName]) {
-                    groupedOptions[variationName] = {
-                        id: option.variationOption.variation.id,
-                        name: variationName,
-                        options: [],
+                if (!groupedAttributes[attributeName]) {
+                    groupedAttributes[attributeName] = {
+                        id: attribute.id,
+                        name: attributeName,
+                        values: []
                     };
                 }
 
-                groupedOptions[variationName].options.push({
-                    id: option.variationOption.id,
-                    name: option.variationOption.name,
-                    value: option.variationOption.value,
+                groupedAttributes[attributeName].values.push({
+                    id: av.attributeValue.id,
+                    name: av.attributeValue.name,
+                    value: av.attributeValue.value
                 });
             });
 
-            transformed.groupedOptions = Object.values(groupedOptions);
-            delete transformed.options;
+            transformed.groupedAttributes = Object.values(groupedAttributes);
+            delete transformed.attributeValues;
         }
 
         // Calculate final price after discount

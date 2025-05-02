@@ -57,42 +57,49 @@ model Product {
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
 
-  variations  ProductVariation[]
-  cartItems   CartItem[]
-  orderItems  OrderItem[]
+  productAttributes ProductAttribute[]
+  variations        ProductVariation[]
+  cartItems         CartItem[]
+  orderItems        OrderItem[]
 }
 
-model Variation {
-  id        Int          @id @default(autoincrement())
-  name      String
-  slug      String       @unique
-  sort      Int?
-  status    CommonStatus @default(ACTIVE)
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
-
-  options VariationOption[]
-}
-
-model VariationOption {
+model ProductAttribute {
   id          Int          @id @default(autoincrement())
+  productId   Int
+  product     Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
   name        String
-  slug        String       @unique
-  value       String?
-  variationId Int
-  variation   Variation    @relation(fields: [variationId], references: [id])
+  slug        String
   sort        Int?
   status      CommonStatus @default(ACTIVE)
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 
-  productVariations ProductVariationOption[]
+  values      ProductAttributeValue[]
+
+  @@unique([productId, slug])
+}
+
+model ProductAttributeValue {
+  id                Int             @id @default(autoincrement())
+  attributeId      Int
+  attribute        ProductAttribute @relation(fields: [attributeId], references: [id], onDelete: Cascade)
+  name             String
+  slug             String
+  value            String?
+  sort             Int?
+  status           CommonStatus     @default(ACTIVE)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  productVariations ProductVariationValue[]
+
+  @@unique([attributeId, slug])
 }
 
 model ProductVariation {
   id         Int          @id @default(autoincrement())
   productId  Int
-  product    Product      @relation(fields: [productId], references: [id])
+  product    Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
   sku        String       @unique
   price      Float?
   percentOff Int?
@@ -103,19 +110,19 @@ model ProductVariation {
   createdAt  DateTime     @default(now())
   updatedAt  DateTime     @updatedAt
 
-  options            ProductVariationOption[]
-  cartItems          CartItem[]
-  orderItems         OrderItem[]
+  attributeValues   ProductVariationValue[]
+  cartItems         CartItem[]
+  orderItems        OrderItem[]
 }
 
-model ProductVariationOption {
-  id                 Int              @id @default(autoincrement())
+model ProductVariationValue {
+  id                 Int                  @id @default(autoincrement())
   productVariationId Int
-  productVariation   ProductVariation @relation(fields: [productVariationId], references: [id], onDelete: Cascade)
-  variationOptionId  Int
-  variationOption    VariationOption  @relation(fields: [variationOptionId], references: [id])
+  productVariation   ProductVariation     @relation(fields: [productVariationId], references: [id], onDelete: Cascade)
+  attributeValueId   Int
+  attributeValue     ProductAttributeValue @relation(fields: [attributeValueId], references: [id], onDelete: Cascade)
 
-  @@unique([productVariationId, variationOptionId])
+  @@unique([productVariationId, attributeValueId])
 }
 
 model Cart {
@@ -189,7 +196,7 @@ model OrderItem {
   price              Float
   discount           Float            @default(0)
   total              Float
-  metadata           Json?            // Lưu thông tin sản phẩm tại thời điểm đặt hàng
+  metadata           Json?            // Store product information at the time of order
   createdAt          DateTime         @default(now())
   updatedAt          DateTime         @updatedAt
 
@@ -228,10 +235,10 @@ model Shipping {
 model Coupon {
   id              Int               @id @default(autoincrement())
   code            String            @unique
-  type            CouponType        
-  value           Float             
-  minPurchase     Float?            
-  maxUsage        Int?              
+  type            CouponType
+  value           Float
+  minPurchase     Float?
+  maxUsage        Int?
   usageCount      Int               @default(0)
   startDate       DateTime
   endDate         DateTime

@@ -15,7 +15,7 @@ import { AddToCartDto, UpdateCartItemDto } from './dto';
 import { AuthGuard } from 'src/common/guards/auth.guard';
 import ApiResponse from 'src/global/api.response';
 
-@ApiTags('Cart')
+@ApiTags('Client - Cart')
 @Controller('cart')
 @UseGuards(AuthGuard)
 @ApiBearerAuth()

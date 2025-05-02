@@ -58,11 +58,11 @@ export class OrderService {
             }
         }
 
-        // Get user's current cart
+        // Get user's current cart with items
         const cart = await this.cartService.getOrCreateCart(userId);
 
         // Check if cart has products
-        if (cart.items.length === 0) {
+        if (!cart.items || cart.items.length === 0) {
             throw new BadRequestException('Your cart is empty');
         }
 
@@ -71,7 +71,7 @@ export class OrderService {
         const orderItems = [];
 
         // Prepare data for order items
-        for (const item of cart.items) {
+        for (const item of cart.items || []) {
             // Get product and variation information
             const product = await this.prisma.product.findUnique({
                 where: { id: item.productId },
@@ -89,11 +89,11 @@ export class OrderService {
                 productVariation = await this.prisma.productVariation.findUnique({
                     where: { id: item.productVariationId },
                     include: {
-                        options: {
+                        attributeValues: {
                             include: {
-                                variationOption: {
+                                attributeValue: {
                                     include: {
-                                        variation: true,
+                                        attribute: true,
                                     },
                                 },
                             },
@@ -138,10 +138,11 @@ export class OrderService {
                 variationMetadata = {
                     sku: productVariation.sku,
                     images: productVariation.images,
-                    options: productVariation.options.map(option => ({
-                        name: option.variationOption.variation.name,
-                        value: option.variationOption.name,
-                    })),
+                    attributes: productVariation.attributeValues ?
+                        productVariation.attributeValues.map(av => ({
+                            name: av.attributeValue?.attribute?.name || 'Unknown',
+                            value: av.attributeValue?.name || 'Unknown',
+                        })) : [],
                 };
             }
 
@@ -235,7 +236,7 @@ export class OrderService {
         }
 
         // Update product inventory
-        for (const item of cart.items) {
+        for (const item of cart.items || []) {
             if (item.productVariationId) {
                 await this.prisma.productVariation.update({
                     where: { id: item.productVariationId },

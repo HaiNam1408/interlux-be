@@ -16,7 +16,7 @@ import { AuthGuard } from 'src/common/guards/auth.guard';
 import ApiResponse from 'src/global/api.response';
 import { Public } from 'src/common/decorators/public.decorator';
 
-@ApiTags('Payment')
+@ApiTags('Client - Payment')
 @Controller('payment')
 export class PaymentController {
     constructor(private readonly paymentService: PaymentService) { }

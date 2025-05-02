@@ -12,7 +12,7 @@ import { Response } from 'express';
 import { renderTemplate } from 'src/utils/template.util';
 
 @ApiBearerAuth()
-    @ApiTags("Auth")
+@ApiTags("Client - Auth")
 @Controller("auth")
 export class AuthController {
     constructor(private authService: AuthService) { }

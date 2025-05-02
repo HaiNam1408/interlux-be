@@ -7,7 +7,12 @@ import { PaginationService } from 'src/utils/pagination.util';
 
 @Module({
   controllers: [ProductController],
-  providers: [ProductService, PrismaService, FilesService, PaginationService],
+  providers: [
+    ProductService,
+    PrismaService,
+    FilesService,
+    PaginationService
+  ],
   exports: [ProductService],
 })
 export class ProductModule {}

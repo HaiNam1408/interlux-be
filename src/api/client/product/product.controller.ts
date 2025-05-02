@@ -14,7 +14,7 @@ import { CacheInterceptor } from '@nestjs/cache-manager';
 import { ProductClientService } from './product.service';
 import { FindAllProductsClientDto } from './dto';
 
-@ApiTags('Product')
+@ApiTags('Client - Product')
 @Controller('product')
 @UseInterceptors(CacheInterceptor)
 export class ProductClientController {
@@ -65,7 +65,6 @@ export class ProductClientController {
     async getFeaturedProducts(): Promise<ApiResponse<any>> {
         try {
             const result = await this.productClientService.getFeaturedProducts();
-            console.log('aaaaaaaaaaaaaaaaa');
             return new ApiResponse(
                 'Featured products retrieved successfully',
                 HttpStatus.OK,
@@ -128,10 +127,10 @@ export class ProductClientController {
     }
 
     @ApiOperation({ summary: 'Get product details by slug' })
-    @Get('detail/:slug')
-    async findBySlug(@Param('slug') slug: string): Promise<ApiResponse<any>> {
+    @Get('detail/:id')
+    async findBySlug(@Param('id') id: number): Promise<ApiResponse<any>> {
         try {
-            const result = await this.productClientService.findBySlug(slug);
+            const result = await this.productClientService.findBySlug(id);
 
             return new ApiResponse(
                 'Product details retrieved successfully',

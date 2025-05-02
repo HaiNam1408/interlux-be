@@ -270,21 +270,23 @@ export async function seedOrders(prisma: PrismaClient) {
 
 // Helper function to get variation option details
 async function getVariantDetails(prisma: PrismaClient, variantId: number) {
-    const options = await prisma.productVariationOption.findMany({
+    // The old productVariationOption model no longer exists
+    // We're now using productVariationValue with the new schema
+    const attributeValues = await prisma.productVariationValue.findMany({
         where: { productVariationId: variantId },
         include: {
-            variationOption: {
+            attributeValue: {
                 include: {
-                    variation: true
+                    attribute: true
                 }
             }
         }
     });
 
-    return options.map(opt => ({
-        variation: opt.variationOption.variation.name,
-        option: opt.variationOption.name,
-        value: opt.variationOption.value
+    return attributeValues.map(attr => ({
+        variation: attr.attributeValue?.attribute?.name || 'Unknown',
+        option: attr.attributeValue?.name || 'Unknown',
+        value: attr.attributeValue?.value || ''
     }));
 }
 

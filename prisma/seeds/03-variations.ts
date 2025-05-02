@@ -2,11 +2,16 @@ import { PrismaClient } from '@prisma/client';
 import { slugify } from './utils/slugify';
 
 export async function seedVariations(prisma: PrismaClient) {
-    // Delete existing data to avoid duplicates
-    await prisma.variationOption.deleteMany({});
-    await prisma.variation.deleteMany({});
+    // This function is now deprecated as we've moved to product-specific attributes
+    console.log('Skipping old variation seeding...');
 
-    // Create color variation
+    // All code in this function is commented out because we've moved to product-specific attributes
+    // The old variation models no longer exist in the schema
+
+    console.log('Variations seeding skipped');
+    return;
+
+    /* Commented out old code
     const colorVariation = await prisma.variation.create({
         data: {
             name: 'Color',
@@ -142,4 +147,5 @@ export async function seedVariations(prisma: PrismaClient) {
     }
 
     console.log('Variations and variation options created successfully');
+    */
 }

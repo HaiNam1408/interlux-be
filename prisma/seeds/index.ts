@@ -1,8 +1,8 @@
 import { PrismaClient } from '@prisma/client';
 import { seedUsers } from './01-users';
 import { seedCategories } from './02-categories';
-import { seedVariations } from './03-variations';
 import { seedProducts } from './04-products';
+import { seedProductAttributes } from './03-product-attributes';
 import { seedProductVariations } from './05-product-variations';
 import { seedCoupons } from './06-coupons';
 import { seedShipping } from './07-shipping';
@@ -19,11 +19,11 @@ async function main() {
     console.log('Seeding categories...');
     await seedCategories(prisma);
 
-    console.log('Seeding variations...');
-    await seedVariations(prisma);
-
     console.log('Seeding products...');
     await seedProducts(prisma);
+
+    console.log('Seeding product attributes...');
+    await seedProductAttributes(prisma);
 
     console.log('Seeding product variations...');
     await seedProductVariations(prisma);

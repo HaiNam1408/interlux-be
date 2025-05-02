@@ -13,7 +13,7 @@ import { CacheInterceptor } from '@nestjs/cache-manager';
 import { CategoryClientService } from './category.service';
 import { FindCategoriesClientDto } from './dto';
 
-@ApiTags('Category')
+@ApiTags('Client - Category')
 @Controller('category')
 @UseInterceptors(CacheInterceptor)
 export class CategoryClientController {

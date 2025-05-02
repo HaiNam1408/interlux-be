@@ -9,9 +9,9 @@ import { RolesGuard } from 'src/common/guards/role.guard';
 import { Roles } from 'src/common/decorators/roles.decorators';
 import { Role } from 'src/common/enums/role.enum';
 
-@ApiTags('category')
+@ApiTags('Admin - Category')
 @Controller('category')
-// @ApiBearerAuth()
+@ApiBearerAuth()
 // @UseGuards(AuthGuard, RolesGuard)
 // @Roles(Role.ADMIN)
 export class CategoryController {

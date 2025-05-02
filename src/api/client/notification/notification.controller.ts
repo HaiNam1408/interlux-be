@@ -18,7 +18,7 @@ import { resError } from 'src/global/handleError.global';
 import { ClientNotificationService } from './notification.service';
 import { QueryNotificationDto } from './dto';
 
-@ApiTags('Notification')
+@ApiTags('Client - Notification')
 @Controller('notification')
 @UseGuards(AuthGuard)
 @ApiBearerAuth()

@@ -9,9 +9,9 @@ import { RolesGuard } from 'src/common/guards/role.guard';
 import { Roles } from 'src/common/decorators/roles.decorators';
 import { Role } from 'src/common/enums/role.enum';
 
-@ApiTags('Coupon')
+@ApiTags('Admin - Coupon')
 @Controller('coupon')
-// @ApiBearerAuth()
+@ApiBearerAuth()
 // @UseGuards(AuthGuard, RolesGuard)
 // @Roles(Role.ADMIN)
 export class CouponController {

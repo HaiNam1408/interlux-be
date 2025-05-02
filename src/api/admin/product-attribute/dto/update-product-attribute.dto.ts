@@ -8,16 +8,11 @@ import {
 } from 'class-validator';
 import { Transform } from 'class-transformer';
 
-export class UpdateVariationOptionDto {
-    @ApiPropertyOptional({ description: 'Variation option name' })
+export class UpdateProductAttributeDto {
+    @ApiPropertyOptional({ description: 'Attribute name' })
     @IsString()
     @IsOptional()
     name?: string;
-
-    @ApiPropertyOptional({ description: 'Variation option value' })
-    @IsString()
-    @IsOptional()
-    value?: string;
 
     @ApiPropertyOptional({ description: 'Sort order' })
     @IsInt()
@@ -26,7 +21,7 @@ export class UpdateVariationOptionDto {
     sort?: number;
 
     @ApiPropertyOptional({
-        description: 'Option status',
+        description: 'Attribute status',
         enum: CommonStatus,
     })
     @IsEnum(CommonStatus)

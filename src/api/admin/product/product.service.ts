@@ -100,21 +100,24 @@ export class ProductService {
             ];
         }
 
+        // Chỉ chọn các trường cần thiết
         const select = {
             id: true,
             title: true,
             slug: true,
-            description: true,
             price: true,
             percentOff: true,
-            attributes: true,
             images: true,
-            sort: true,
             status: true,
             createdAt: true,
-            updatedAt: true,
             categoryId: true,
-            category: true
+            category: {
+                select: {
+                    id: true,
+                    name: true,
+                    slug: true
+                }
+            }
         };
 
         const orderBy = [{ sort: 'asc' } ,{ createdAt: 'desc' }];
@@ -139,27 +142,55 @@ export class ProductService {
                         slug: true
                     },
                 },
-                variations: {
-                    include: {
-                        options: {
+                productAttributes: {
+                    select: {
+                        id: true,
+                        name: true,
+                        slug: true,
+                        sort: true,
+                        status: true,
+                        values: {
                             select: {
                                 id: true,
-                                variationOption: {
+                                name: true,
+                                value: true,
+                                slug: true,
+                                sort: true,
+                                status: true
+                            }
+                        }
+                    }
+                },
+                variations: {
+                    select: {
+                        id: true,
+                        sku: true,
+                        price: true,
+                        percentOff: true,
+                        inventory: true,
+                        images: true,
+                        isDefault: true,
+                        status: true,
+                        attributeValues: {
+                            select: {
+                                id: true,
+                                attributeValueId: true,
+                                attributeValue: {
                                     select: {
                                         id: true,
                                         name: true,
                                         value: true,
-                                        variation: {
+                                        attribute: {
                                             select: {
                                                 id: true,
-                                                name: true,
-                                            },
-                                        },
-                                    },
-                                },
-                            },
-                        },
-                    },
+                                                name: true
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             },
         });
@@ -168,7 +199,8 @@ export class ProductService {
             throw new HttpException('Product not found', 404);
         }
 
-        return product;
+        // Chuyển đổi dữ liệu để response gọn gàng hơn
+        return this.transformProductDetail(product);
     }
 
     async update(
@@ -214,13 +246,13 @@ export class ProductService {
         let currentImages = [];
         if (updateProductDto.imagesToDelete) {
             const imagesToDelete = JSON.parse(updateProductDto.imagesToDelete.toString()) ?? [];
-    
+
             if (product.images) {
                 currentImages = typeof product.images === 'string'
                     ? JSON.parse(product.images as string)
                     : product.images as any[];
             }
-    
+
             if (imagesToDelete && imagesToDelete.length > 0) {
                 try {
                     const fileNamesToDelete = imagesToDelete.map(img =>
@@ -229,7 +261,7 @@ export class ProductService {
                     const imagesToRemove = currentImages.filter(img =>
                         fileNamesToDelete.includes(img.fileName)
                     );
-    
+
                     if (imagesToRemove.length > 0) {
                         for (const image of imagesToRemove) {
                             if (image && image.fileName) {
@@ -241,7 +273,7 @@ export class ProductService {
                             }
                         }
                     }
-    
+
                     currentImages = currentImages.filter(img =>
                         !fileNamesToDelete.includes(img.fileName)
                     );
@@ -357,5 +389,87 @@ export class ProductService {
                 }
             });
         });
+    }
+
+    // Helper method để chuyển đổi dữ liệu sản phẩm chi tiết
+    private transformProductDetail(product: any): any {
+        // Đảm bảo images là object
+        if (product.images) {
+            product.images = typeof product.images === 'string'
+                ? JSON.parse(product.images as string)
+                : product.images;
+        }
+
+        // Đảm bảo attributes là object
+        if (product.attributes) {
+            product.attributes = typeof product.attributes === 'string'
+                ? JSON.parse(product.attributes as string)
+                : product.attributes;
+        }
+
+        // Tính giá cuối cùng sau khi giảm giá
+        if (product.percentOff && product.percentOff > 0) {
+            product.finalPrice = product.price * (1 - product.percentOff / 100);
+        } else {
+            product.finalPrice = product.price;
+        }
+
+        // Chuyển đổi variations để dễ sử dụng hơn
+        if (product.variations) {
+            product.variations = product.variations.map(variation => {
+                // Đảm bảo images là object
+                if (variation.images) {
+                    variation.images = typeof variation.images === 'string'
+                        ? JSON.parse(variation.images as string)
+                        : variation.images;
+                }
+
+                // Nhóm các thuộc tính theo attribute
+                const groupedAttributes = {};
+
+                if (variation.attributeValues) {
+                    variation.attributeValues.forEach(av => {
+                        if (av.attributeValue) {
+                            const attribute = av.attributeValue.attribute;
+
+                            if (!groupedAttributes[attribute.id]) {
+                                groupedAttributes[attribute.id] = {
+                                    id: attribute.id,
+                                    name: attribute.name,
+                                    values: []
+                                };
+                            }
+
+                            groupedAttributes[attribute.id].values.push({
+                                id: av.attributeValue.id,
+                                name: av.attributeValue.name,
+                                value: av.attributeValue.value
+                            });
+                        }
+                    });
+                }
+
+                // Tính giá cuối cùng sau khi giảm giá
+                let finalPrice = variation.price;
+                if (variation.percentOff && variation.percentOff > 0) {
+                    finalPrice = variation.price * (1 - variation.percentOff / 100);
+                }
+
+                return {
+                    id: variation.id,
+                    sku: variation.sku,
+                    price: variation.price,
+                    finalPrice,
+                    percentOff: variation.percentOff,
+                    inventory: variation.inventory,
+                    images: variation.images,
+                    isDefault: variation.isDefault,
+                    status: variation.status,
+                    attributes: Object.values(groupedAttributes)
+                };
+            });
+        }
+
+        return product;
     }
 }

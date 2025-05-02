@@ -20,7 +20,7 @@ import { resError } from 'src/global/handleError.global';
 import { FilesInterceptor } from '@nestjs/platform-express';
 
 @ApiBearerAuth()
-@ApiTags('product-variation')
+@ApiTags('Admin - Product Variation')
 @Controller('product/:productId/variation')
 export class ProductVariationController {
     constructor(private readonly productVariationService: ProductVariationService) { }
@@ -131,7 +131,6 @@ export class ProductVariationController {
             return new ApiResponse(
                 'Product variation deleted successfully',
                 HttpStatus.OK,
-                null,
             );
         } catch (error) {
             resError(error);

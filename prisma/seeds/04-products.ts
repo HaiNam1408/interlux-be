@@ -15,9 +15,15 @@ function convertToImageObjects(imageUrls: string[]) {
 
 export async function seedProducts(prisma: PrismaClient) {
     // Delete existing data to avoid duplicates
-    await prisma.productVariationOption.deleteMany({});
-    await prisma.productVariation.deleteMany({});
-    await prisma.product.deleteMany({});
+    try {
+        await prisma.productVariationValue.deleteMany({});
+        await prisma.productVariation.deleteMany({});
+        await prisma.productAttributeValue.deleteMany({});
+        await prisma.productAttribute.deleteMany({});
+        await prisma.product.deleteMany({});
+    } catch (error) {
+        console.error('Error cleaning up data:', error);
+    }
 
     // Find categories
     const sofaCategory = await prisma.category.findFirst({

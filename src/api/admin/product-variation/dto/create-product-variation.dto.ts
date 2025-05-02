@@ -10,37 +10,37 @@ import {
     ArrayMinSize,
 } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
-import { CreateProductVariationOptionDto } from './create-product-variation-option.dto';
+import { CreateProductVariationValueDto } from './create-product-variation-value.dto';
 
 export class CreateProductVariationDto {
     @ApiProperty({ description: 'SKU product variation' })
     @IsString()
     sku: string;
 
-    @ApiPropertyOptional({ description: 'price product variation' })
+    @ApiPropertyOptional({ description: 'Price product variation' })
     @IsOptional()
     @Transform(({ value }) => value ? parseFloat(value) : undefined)
     price?: number;
 
-    @ApiPropertyOptional({ description: 'percent off product variation' })
+    @ApiPropertyOptional({ description: 'Percent off product variation' })
     @IsInt()
     @IsOptional()
     @Transform(({ value }) => value ? parseInt(value) : undefined)
     percentOff?: number;
 
-    @ApiPropertyOptional({ description: 'inventory product variation' })
+    @ApiPropertyOptional({ description: 'Inventory product variation' })
     @IsInt()
     @IsOptional()
     @Transform(({ value }) => value ? parseInt(value) : undefined)
     inventory?: number = 0;
 
-    @ApiPropertyOptional({ description: 'default product variation', default: false })
+    @ApiPropertyOptional({ description: 'Default product variation', default: false })
     @IsOptional()
     @Transform(({ value }) => value === 'true' || value === true)
     isDefault?: boolean = false;
 
     @ApiPropertyOptional({
-        description: 'status product variation',
+        description: 'Status product variation',
         enum: CommonStatus,
         default: CommonStatus.ACTIVE,
     })
@@ -48,11 +48,10 @@ export class CreateProductVariationDto {
     @IsOptional()
     status?: CommonStatus;
 
-    @ApiProperty({ description: 'option product variation', type: [CreateProductVariationOptionDto] })
-    @Transform(({ value }) => typeof value === 'string' ? JSON.parse(value) : value)
+    @ApiProperty({ description: 'Attribute values for this variation', type: [CreateProductVariationValueDto] })
+    @Transform(({ value }) => value.map((id) => (Number(id))))
     @IsArray()
-    @ValidateNested({ each: true })
     @ArrayMinSize(1)
-    @Type(() => CreateProductVariationOptionDto)
-    options: CreateProductVariationOptionDto[];
+    @Type(() => CreateProductVariationValueDto)
+    attributeValues: number[];
 }

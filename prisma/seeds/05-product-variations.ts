@@ -41,145 +41,199 @@ function ensureImageFormat(images: any) {
 }
 
 export async function seedProductVariations(prisma: PrismaClient) {
-    // Let's get all products
+    console.log('Creating product variations...');
+
+    // Clean up existing data
+    await prisma.productVariationValue.deleteMany({});
+    await prisma.productVariation.deleteMany({});
+
+    // Get all products
     const products = await prisma.product.findMany();
 
-    // Get all variation options
-    const colorOptions = await prisma.variationOption.findMany({
-        where: {
-            variation: {
-                slug: 'color'
-            }
-        }
-    });
-
-    const materialOptions = await prisma.variationOption.findMany({
-        where: {
-            variation: {
-                slug: 'material'
-            }
-        }
-    });
-
-    const sizeOptions = await prisma.variationOption.findMany({
-        where: {
-            variation: {
-                slug: 'size'
-            }
-        }
-    });
-
-    // Create product variations for each product
     for (const product of products) {
-        // Skip if product already has variations
-        const existingVariations = await prisma.productVariation.count({
-            where: { productId: product.id }
+        // Get product attributes
+        const attributes = await prisma.productAttribute.findMany({
+            where: { productId: product.id },
+            include: { values: true },
         });
 
-        if (existingVariations > 0) continue;
+        // Find specific attributes
+        const colorAttribute = attributes.find(attr => attr.name === 'Color');
+        const materialAttribute = attributes.find(attr => attr.name === 'Material');
+        const sizeAttribute = attributes.find(attr => attr.name === 'Size');
 
-        // We'll create multiple variations for each product
-        const variations = [];
+        if (!colorAttribute || !materialAttribute || !sizeAttribute) {
+            console.log(`Skipping product ${product.id} - missing attributes`);
+            continue;
+        }
 
-        // Default variation
-        variations.push({
-            productId: product.id,
-            sku: `${product.slug}-default`,
-            price: product.price,
-            percentOff: product.percentOff,
-            inventory: 50,
-            images: ensureImageFormat(product.images),
-            isDefault: true,
-            status: 'ACTIVE',
-            options: []
+        // Create default variation
+        const defaultVariation = await prisma.productVariation.create({
+            data: {
+                productId: product.id,
+                sku: `${product.slug}-default`,
+                price: product.price,
+                percentOff: product.percentOff || 0,
+                inventory: 50,
+                images: ensureImageFormat(product.images),
+                isDefault: true,
+                status: 'ACTIVE',
+            },
+        });
+
+        // Add default attribute values
+        const defaultColor = colorAttribute.values[0];
+        const defaultMaterial = materialAttribute.values[0];
+        const defaultSize = sizeAttribute.values.find(v => v.name === 'Medium') || sizeAttribute.values[0];
+
+        await prisma.productVariationValue.create({
+            data: {
+                productVariationId: defaultVariation.id,
+                attributeValueId: defaultColor.id,
+            },
+        });
+
+        await prisma.productVariationValue.create({
+            data: {
+                productVariationId: defaultVariation.id,
+                attributeValueId: defaultMaterial.id,
+            },
+        });
+
+        await prisma.productVariationValue.create({
+            data: {
+                productVariationId: defaultVariation.id,
+                attributeValueId: defaultSize.id,
+            },
         });
 
         // Add color variations
-        for (let i = 0; i < Math.min(3, colorOptions.length); i++) {
-            const colorOption = colorOptions[i];
-            variations.push({
-                productId: product.id,
-                sku: `${product.slug}-${colorOption.slug}`,
-                price: product.price + (i * 50), // Increase price slightly for different colors
-                percentOff: product.percentOff,
-                inventory: 30,
-                images: ensureImageFormat(product.images),
-                isDefault: false,
-                status: 'ACTIVE',
-                options: [{ variationOptionId: colorOption.id }]
-            });
-        }
+        for (let i = 1; i < Math.min(colorAttribute.values.length, 4); i++) {
+            const colorValue = colorAttribute.values[i];
 
-        // Add material + color combinations for premium products
-        if (product.price > 2000) {
-            for (let i = 0; i < Math.min(2, materialOptions.length); i++) {
-                const materialOption = materialOptions[i];
-                const colorOption = colorOptions[(i + 3) % colorOptions.length]; // Use different colors than above
-                variations.push({
+            const colorVariation = await prisma.productVariation.create({
+                data: {
                     productId: product.id,
-                    sku: `${product.slug}-${materialOption.slug}-${colorOption.slug}`,
-                    price: product.price + 200 + (i * 100), // Premium for special materials
-                    percentOff: Math.max(0, (product.percentOff || 0) - 5), // Less discount for premium variants
-                    inventory: 15,
+                    sku: `${product.slug}-${colorValue.slug}`,
+                    price: product.price + (i * 50), // Increase price slightly for different colors
+                    percentOff: product.percentOff || 0,
+                    inventory: 30,
                     images: ensureImageFormat(product.images),
                     isDefault: false,
                     status: 'ACTIVE',
-                    options: [
-                        { variationOptionId: materialOption.id },
-                        { variationOptionId: colorOption.id }
-                    ]
+                },
+            });
+
+            // Add attribute values
+            await prisma.productVariationValue.create({
+                data: {
+                    productVariationId: colorVariation.id,
+                    attributeValueId: colorValue.id,
+                },
+            });
+
+            await prisma.productVariationValue.create({
+                data: {
+                    productVariationId: colorVariation.id,
+                    attributeValueId: defaultMaterial.id,
+                },
+            });
+
+            await prisma.productVariationValue.create({
+                data: {
+                    productVariationId: colorVariation.id,
+                    attributeValueId: defaultSize.id,
+                },
+            });
+        }
+
+        // Add material variations for premium products
+        if (product.price > 2000) {
+            for (let i = 1; i < Math.min(materialAttribute.values.length, 3); i++) {
+                const materialValue = materialAttribute.values[i];
+
+                const materialVariation = await prisma.productVariation.create({
+                    data: {
+                        productId: product.id,
+                        sku: `${product.slug}-${materialValue.slug}`,
+                        price: product.price + 200 + (i * 100), // Premium for special materials
+                        percentOff: Math.max(0, (product.percentOff || 0) - 5), // Less discount for premium variants
+                        inventory: 15,
+                        images: ensureImageFormat(product.images),
+                        isDefault: false,
+                        status: 'ACTIVE',
+                    },
+                });
+
+                // Add attribute values
+                await prisma.productVariationValue.create({
+                    data: {
+                        productVariationId: materialVariation.id,
+                        attributeValueId: defaultColor.id,
+                    },
+                });
+
+                await prisma.productVariationValue.create({
+                    data: {
+                        productVariationId: materialVariation.id,
+                        attributeValueId: materialValue.id,
+                    },
+                });
+
+                await prisma.productVariationValue.create({
+                    data: {
+                        productVariationId: materialVariation.id,
+                        attributeValueId: defaultSize.id,
+                    },
                 });
             }
         }
 
         // Add size variations for furniture that comes in different sizes
-        if (['beds', 'sofas', 'dining-tables'].includes(product.slug.split('-')[0])) {
-            for (let i = 0; i < Math.min(3, sizeOptions.length); i++) {
-                const sizeOption = sizeOptions[i];
+        if (['beds', 'sofas', 'dining-tables'].some(term => product.slug.includes(term))) {
+            for (let i = 0; i < sizeAttribute.values.length; i++) {
+                const sizeValue = sizeAttribute.values[i];
+
                 // Skip default size "Medium" as it's covered by default variation
-                if (sizeOption.slug === 'medium') continue;
+                if (sizeValue.name === 'Medium') continue;
 
                 // Small sizes are cheaper, large sizes are more expensive
-                const priceAdjustment = sizeOption.slug.includes('small') ? -200 : 300;
+                const priceAdjustment = sizeValue.name.includes('Small') ? -200 : 300;
 
-                variations.push({
-                    productId: product.id,
-                    sku: `${product.slug}-${sizeOption.slug}`,
-                    price: product.price + priceAdjustment,
-                    percentOff: product.percentOff,
-                    inventory: sizeOption.slug.includes('small') ? 40 : 20,
-                    images: ensureImageFormat(product.images),
-                    isDefault: false,
-                    status: 'ACTIVE',
-                    options: [{ variationOptionId: sizeOption.id }]
+                const sizeVariation = await prisma.productVariation.create({
+                    data: {
+                        productId: product.id,
+                        sku: `${product.slug}-${sizeValue.slug}`,
+                        price: product.price + priceAdjustment,
+                        percentOff: product.percentOff || 0,
+                        inventory: sizeValue.name.includes('Small') ? 40 : 20,
+                        images: ensureImageFormat(product.images),
+                        isDefault: false,
+                        status: 'ACTIVE',
+                    },
                 });
-            }
-        }
 
-        // Create all variations for this product
-        for (const variation of variations) {
-            const { options, ...variationData } = variation;
+                // Add attribute values
+                await prisma.productVariationValue.create({
+                    data: {
+                        productVariationId: sizeVariation.id,
+                        attributeValueId: defaultColor.id,
+                    },
+                });
 
-            // Make sure images are not stringified again
-            const dataToCreate = {
-                ...variationData,
-                // Prisma will automatically handle the JSON serialization
-            };
+                await prisma.productVariationValue.create({
+                    data: {
+                        productVariationId: sizeVariation.id,
+                        attributeValueId: defaultMaterial.id,
+                    },
+                });
 
-            const createdVariation = await prisma.productVariation.create({
-                data: dataToCreate
-            });
-
-            // Create options for this variation
-            if (options && options.length > 0) {
-                for (const option of options) {
-                    await prisma.productVariationOption.create({
-                        data: {
-                            productVariationId: createdVariation.id,
-                            variationOptionId: option.variationOptionId
-                        }
-                    });
-                }
+                await prisma.productVariationValue.create({
+                    data: {
+                        productVariationId: sizeVariation.id,
+                        attributeValueId: sizeValue.id,
+                    },
+                });
             }
         }
     }

@@ -6,7 +6,7 @@ import { AddToCartDto, UpdateCartItemDto } from './dto';
 export class CartService {
     constructor(private prisma: PrismaService) { }
 
-    async getOrCreateCart(userId: number) {
+    async getOrCreateCart(userId: number): Promise<any> {
         // Tìm giỏ hàng của user
         let cart = await this.prisma.cart.findFirst({
             where: { userId },
@@ -16,11 +16,11 @@ export class CartService {
                         product: true,
                         productVariation: {
                             include: {
-                                options: {
+                                attributeValues: {
                                     include: {
-                                        variationOption: {
+                                        attributeValue: {
                                             include: {
-                                                variation: true,
+                                                attribute: true,
                                             },
                                         },
                                     },
@@ -34,19 +34,24 @@ export class CartService {
 
         // Nếu chưa có giỏ hàng, tạo giỏ hàng mới
         if (!cart) {
-            cart = await this.prisma.cart.create({
+            const newCart = await this.prisma.cart.create({
                 data: { userId },
+            });
+
+            // Fetch cart with items
+            cart = await this.prisma.cart.findUnique({
+                where: { id: newCart.id },
                 include: {
                     items: {
                         include: {
                             product: true,
                             productVariation: {
                                 include: {
-                                    options: {
+                                    attributeValues: {
                                         include: {
-                                            variationOption: {
+                                            attributeValue: {
                                                 include: {
-                                                    variation: true,
+                                                    attribute: true,
                                                 },
                                             },
                                         },
@@ -57,6 +62,14 @@ export class CartService {
                     },
                 },
             });
+
+            // If cart is still null, initialize with empty items array
+            if (!cart) {
+                cart = {
+                    ...newCart,
+                    items: []
+                };
+            }
         }
 
         return cart;
@@ -196,31 +209,33 @@ export class CartService {
         return this.getOrCreateCart(userId);
     }
 
-    async getCartSummary(cart) {
+    async getCartSummary(cart: any) {
         // Tính tổng số lượng sản phẩm và tổng tiền
         let totalItems = 0;
         let subtotal = 0;
 
-        for (const item of cart.items) {
-            totalItems += item.quantity;
+        if (cart && cart.items) {
+            for (const item of cart.items) {
+                totalItems += item.quantity;
 
-            // Sử dụng giá của biến thể nếu có, nếu không thì dùng giá của sản phẩm
-            let itemPrice = item.product.price;
-            let itemDiscount = item.product.percentOff || 0;
+                // Sử dụng giá của biến thể nếu có, nếu không thì dùng giá của sản phẩm
+                let itemPrice = item.product.price;
+                let itemDiscount = item.product.percentOff || 0;
 
-            if (item.productVariation?.price) {
-                itemPrice = item.productVariation.price;
-                itemDiscount = item.productVariation.percentOff || 0;
+                if (item.productVariation?.price) {
+                    itemPrice = item.productVariation.price;
+                    itemDiscount = item.productVariation.percentOff || 0;
+                }
+
+                const discountedPrice = itemPrice * (1 - itemDiscount / 100);
+                subtotal += discountedPrice * item.quantity;
             }
-
-            const discountedPrice = itemPrice * (1 - itemDiscount / 100);
-            subtotal += discountedPrice * item.quantity;
         }
 
         return {
             totalItems,
             subtotal,
-            items: cart.items.length,
+            items: cart.items ? cart.items.length : 0,
         };
     }
 }

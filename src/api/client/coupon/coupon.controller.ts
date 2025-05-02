@@ -12,7 +12,7 @@ import { ValidateCouponDto } from './dto';
 import { AuthGuard } from 'src/common/guards/auth.guard';
 import ApiResponse from 'src/global/api.response';
 
-@ApiTags('Coupon')
+@ApiTags('Client - Coupon')
 @Controller('coupon')
 @UseGuards(AuthGuard)
 @ApiBearerAuth()
