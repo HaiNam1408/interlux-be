@@ -11,6 +11,7 @@ import { CouponController } from './coupon/coupon.controller';
 import { CouponModule } from './coupon/coupon.module';
 import { ProductAttributeController } from './product-attribute/product-attribute.controller';
 import { ProductVariationController } from './product-variation/product-variation.controller';
+import { FilesModule } from 'src/services/file/file.module';
 
 @Module({
     imports: [
@@ -18,7 +19,8 @@ import { ProductVariationController } from './product-variation/product-variatio
         ProductModule,
         ProductAttributeModule,
         ProductVariationModule,
-        CouponModule
+        CouponModule,
+        FilesModule
     ],
     providers: [
         JwtService,

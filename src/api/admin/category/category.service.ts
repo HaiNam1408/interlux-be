@@ -4,12 +4,14 @@ import { CreateCategoryDto, UpdateCategoryDto } from './dto';
 import { SlugUtil } from 'src/utils/createSlug.util';
 import { PaginationService } from 'src/utils/pagination.util';
 import { TableName } from 'src/common/enums/table.enum';
+import { FilesService } from 'src/services/file/file.service';
 
 @Injectable()
 export class CategoryService {
     constructor(
         private readonly prismaService: PrismaService,
-        private readonly pagination: PaginationService
+        private readonly pagination: PaginationService,
+        private readonly filesService: FilesService
     ) { }
 
     async findAll(page: number = 1, limit: number = 10, parentId?: number): Promise<any> {
@@ -21,8 +23,9 @@ export class CategoryService {
             slug: true,
             sort: true,
             parentId: true,
+            image: true,
             children: {
-                select: { id: true, name: true, slug: true },
+                select: { id: true, name: true, slug: true, image: true },
                 orderBy: [{ sort: 'asc' }, { createdAt: 'desc' }]
             }
         };
@@ -82,8 +85,7 @@ export class CategoryService {
         return category;
     }
 
-    async create(createCategoryDto: CreateCategoryDto): Promise<any> {
-        // Check if parent exists when parentId is provided
+    async create(createCategoryDto: CreateCategoryDto, image?: Express.Multer.File): Promise<any> {
         if (createCategoryDto.parentId) {
             const parentExists = await this.prismaService.category.findUnique({
                 where: { id: createCategoryDto.parentId }
@@ -94,7 +96,6 @@ export class CategoryService {
             }
         }
 
-        // Check if category name already exists
         const nameExists = await this.prismaService.category.findUnique({
             where: { name: createCategoryDto.name }
         });
@@ -103,7 +104,6 @@ export class CategoryService {
             throw new BadRequestException(`Category with name "${createCategoryDto.name}" already exists`);
         }
 
-        // Check if slug already exists
         const slug = SlugUtil.createSlug(createCategoryDto.name);
         const slugExists = await this.prismaService.category.findUnique({
             where: { slug }
@@ -113,8 +113,28 @@ export class CategoryService {
             throw new BadRequestException(`Category with slug "${slug}" already exists`);
         }
 
+        let imageData = null;
+
+        // Handle uploaded image if provided
+        if (image) {
+            imageData = await this.filesService.uploadFile(
+                image.buffer,
+                image.originalname,
+                'categories',
+                'image'
+            );
+        }
+        // Use image from DTO if provided and no file was uploaded
+        else if (createCategoryDto.image) {
+            imageData = createCategoryDto.image;
+        }
+
         const category = await this.prismaService.category.create({
-            data: { ...createCategoryDto, slug },
+            data: {
+                ...createCategoryDto,
+                slug,
+                image: imageData
+            },
             include: {
                 parent: true
             }
@@ -123,8 +143,7 @@ export class CategoryService {
         return category;
     }
 
-    async update(id: number, updateCategoryDto: UpdateCategoryDto): Promise<any> {
-        // Check if category exists
+    async update(id: number, updateCategoryDto: UpdateCategoryDto, image?: Express.Multer.File): Promise<any> {
         const categoryExists = await this.prismaService.category.findUnique({
             where: { id }
         });
@@ -178,9 +197,47 @@ export class CategoryService {
             }
         }
 
+        let imageData = undefined;
+        console.log(updateCategoryDto.image);
+
+        if (image) {
+            if (categoryExists.image) {
+                const oldImage = typeof categoryExists.image === 'string'
+                    ? JSON.parse(categoryExists.image)
+                    : categoryExists.image;
+
+                if (oldImage && oldImage.fileName) {
+                    await this.filesService.deletePublicFile(oldImage.fileName);
+                }
+            }
+
+            imageData = await this.filesService.uploadFile(
+                image.buffer,
+                image.originalname,
+                'categories',
+                'image'
+            );
+        }
+        // If image is explicitly set to null in DTO, delete old image
+        else if (updateCategoryDto.image === "" && categoryExists.image) {
+            const oldImage = typeof categoryExists.image === 'string'
+                ? JSON.parse(categoryExists.image)
+                : categoryExists.image;
+
+            if (oldImage && oldImage.fileName) {
+                await this.filesService.deletePublicFile(oldImage.fileName);
+            }
+
+            imageData = null;
+        }
+
         const updatedCategory = await this.prismaService.category.update({
             where: { id },
-            data: { ...updateCategoryDto, slug: newSlug },
+            data: {
+                ...updateCategoryDto,
+                slug: newSlug,
+                image: imageData
+            },
             include: {
                 parent: true,
                 children: {
@@ -196,7 +253,6 @@ export class CategoryService {
     }
 
     async remove(id: number): Promise<void> {
-        // Check if category exists
         const category = await this.prismaService.category.findUnique({
             where: { id },
             include: { children: true }
@@ -206,9 +262,22 @@ export class CategoryService {
             throw new NotFoundException(`Category with ID ${id} not found`);
         }
 
-        // Check if category has children
         if (category.children.length > 0) {
             throw new BadRequestException('Cannot delete a category that has children. Delete children first or reassign them.');
+        }
+
+        if (category.image) {
+            try {
+                const image = typeof category.image === 'string'
+                    ? JSON.parse(category.image)
+                    : category.image;
+
+                if (image && image.fileName) {
+                    await this.filesService.deletePublicFile(image.fileName);
+                }
+            } catch (error) {
+                console.error('Error deleting category image:', error);
+            }
         }
 
         await this.prismaService.category.delete({
