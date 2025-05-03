@@ -18,6 +18,7 @@ import { Cache } from 'cache-manager';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { renderTemplate } from 'src/utils/template.util';
+import { NotificationService } from 'src/services/notification/notification.service';
 
 @Injectable()
 export class AuthService {
@@ -25,8 +26,9 @@ export class AuthService {
         private prisma: PrismaService,
         private jwtService: JwtService,
         private mailService: MailService,
+        private notificationService: NotificationService,
         @Inject(CACHE_MANAGER) private cacheService: Cache
-    ) { }
+    ) {}
 
     // Generate Access Token & Refresh Token
     private async generateTokens(userId: string, email: string, role: string) {
@@ -51,18 +53,6 @@ export class AuthService {
         });
 
         return { accessToken, refreshToken };
-    }
-
-    async test() {
-        console.log('===> START CACHE');
-        let abc = await this.cacheService.get('abc');
-        if (!abc) {
-            await this.cacheService.set(`abc`, 'Hello');
-            console.log('--------------> RECACHE');
-            return abc;
-        }
-        console.log('===> END CACHE');
-        return abc;
     }
 
     async register(dto: RegisterDto) {
@@ -91,19 +81,48 @@ export class AuthService {
 
     async verifyEmail(token: string, email: string) {
         const cachedUser: string = await this.cacheService.get(`register:${email}`);
+
+        let error: string | undefined;
+
         if (!cachedUser) {
-            throw new HttpException("Token invalid or expired!", HttpStatus.BAD_REQUEST);
+            error = 'Token expired or invalid';
         }
 
-        const cacheData = JSON.parse(cachedUser);
-        const { verifyToken, ...userData } = cacheData;
-        if (verifyToken !== token) {
-            throw new HttpException("Token invalid!", HttpStatus.BAD_REQUEST);
+        let userData: any = null;
+
+        if (!error) {
+            const cacheData = JSON.parse(cachedUser);
+            const { verifyToken, ...restUserData } = cacheData;
+
+            if (verifyToken !== token) {
+                error = 'Invalid token';
+            } else {
+                userData = restUserData;
+            }
         }
 
-        await this.prisma.user.create({ data: userData });
-        await this.cacheService.del(`register:${email}`);
+        if (!error && userData) {
+            const newUser = await this.prisma.user.create({ data: userData });
+            await this.cacheService.del(`register:${email}`);
+
+            // Send welcome notification
+            await this.notificationService.createFromTemplate(
+                newUser.id,
+                'ACCOUNT_CREATED',
+                { username: newUser.username || newUser.email }
+            );
+        }
+
+        const data = {
+            error,
+            name: userData?.username || 'User',
+            loginLink: `${process.env.CLIENT_URL}/login`
+        };
+        const html = await renderTemplate('register-response.ejs', data);
+
+        return html;
     }
+
 
     // Login
     async login(dto: LoginDto) {
@@ -222,10 +241,17 @@ export class AuthService {
             }
 
             const hashedPassword = await bcrypt.hash(dto.newPassword, 10);
-            await this.prisma.user.update({
+            const updatedUser = await this.prisma.user.update({
                 where: { email: dto.email },
                 data: { password: hashedPassword },
             });
+
+            // Send password changed notification
+            await this.notificationService.createFromTemplate(
+                updatedUser.id,
+                'PASSWORD_CHANGED',
+                { username: updatedUser.username || updatedUser.email }
+            );
 
             const html = await renderTemplate('reset-password.ejs', {
                 success: 'Password reset successfully, you can now log in with your new password.'

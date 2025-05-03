@@ -3,19 +3,23 @@ import { HttpStatus } from "@nestjs/common";
 export interface ApiResponseInterface {
     statusCode: HttpStatus;
     message: string;
-    result?: any;
+    data?: any;
 }
 
 class ApiResponse<T> implements ApiResponseInterface {
     statusCode: HttpStatus;
     message: string;
-    result?: T;
+    data?: T;
 
     constructor(message: string, statusCode: HttpStatus, data?: T) {
         this.message = message;
         this.statusCode = statusCode;
-        this.result = data;
+        this.data = data;
         return this;
+    }
+
+    static success<T>(data: T, message: string = "Operation successful"): ApiResponse<T> {
+        return new ApiResponse<T>(message, HttpStatus.OK, data);
     }
 
     static fromError(error: any): ApiResponse<any> {

@@ -23,7 +23,7 @@ export class MailService {
   async sendVerificationEmail(email: string, token: string, name: string) {
     const context = {
       name,
-      link: `${process.env.API_URL}/v1/auth/verify-email?token=${token}&email=${email}`,
+      link: `${process.env.API_URL}/api/v1/auth/verify-email?token=${token}&email=${email}`,
       button: 'Verify',
       title: 'We received your registration request, please confirm the information.',
       desc: 'The link is valid for 5 minutes. Please click confirm.',
@@ -45,7 +45,7 @@ export class MailService {
   async sendForgotPasswordEmail(email: string, token: string, name: string) {
     const context = {
       name,
-      link: `${process.env.API_URL}/v1/auth/change-password?token=${token}&email=${email}`,
+      link: `${process.env.API_URL}/api/v1/auth/change-password?token=${token}&email=${email}`,
       button: `Change your password`,
       title: 'You have requested to reset your password.',
       desc: 'Please click the link below to reset your password. This link is valid for only 10 minutes.',

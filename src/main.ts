@@ -19,6 +19,7 @@ async function bootstrap() {
   app.use(bodyParser.json({ limit: '20mb' }));
   app.use(bodyParser.urlencoded({ limit: '20mb', extended: true }));
   app.enableCors();
+  app.setGlobalPrefix('api');
   app.enableVersioning({
     type: VersioningType.URI,
     defaultVersion: '1',
@@ -39,7 +40,7 @@ async function bootstrap() {
   const clientDocument = SwaggerModule.createDocument(app, clientConfig, {
     include: [ClientModule],
   });
-  SwaggerModule.setup('api/', app, clientDocument);
+  SwaggerModule.setup('api/docs/client', app, clientDocument);
 
   // ========== Swagger for ADMIN ==========
   const adminConfig = new DocumentBuilder()
@@ -52,7 +53,7 @@ async function bootstrap() {
   const adminDocument = SwaggerModule.createDocument(app, adminConfig, {
     include: [AdminModule],
   });
-  SwaggerModule.setup('api/admin', app, adminDocument);
+  SwaggerModule.setup('api/docs/admin', app, adminDocument);
 
   await app.listen(process.env.PORT || 3000);
 }
