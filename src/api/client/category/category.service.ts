@@ -1,7 +1,6 @@
 import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
 import { CommonStatus } from '@prisma/client';
-import { FindCategoriesClientDto } from './dto';
 import { calculateFinalPrice } from 'src/utils/calculatePrice.util';
 
 @Injectable()
@@ -69,12 +68,26 @@ export class CategoryClientService {
             }
         });
 
-        return featuredCategories.map(category => ({
-            id: category.id,
-            name: category.name,
-            slug: category.slug,
-            productCount: category._count.product,
-        }));
+        return featuredCategories.map(category => {
+            // Handle image data safely
+            let imageData = null;
+            if (category['image']) {
+                try {
+                    imageData = JSON.parse(category['image'] as string);
+                } catch (e) {
+                    // If parsing fails, use the raw value
+                    imageData = category['image'];
+                }
+            }
+
+            return {
+                id: category.id,
+                name: category.name,
+                slug: category.slug,
+                image: imageData,
+                productCount: category._count.product,
+            };
+        });
     }
 
     async findBySlug(slug: string): Promise<any> {
@@ -130,8 +143,12 @@ export class CategoryClientService {
             finalPrice: calculateFinalPrice(product.price, product.percentOff)
         }));
 
+        // Parse image data
+        const imageData = category['image'] ? this.parseImageData(category['image']) : null;
+
         return {
             ...category,
+            image: imageData,
             productCount: category._count.product,
             _count: undefined,
             featuredProducts: transformedProducts
@@ -171,11 +188,17 @@ export class CategoryClientService {
             }
         });
 
-        return subcategories.map(subcategory => ({
-            ...subcategory,
-            productCount: subcategory._count.product,
-            _count: undefined
-        }));
+        return subcategories.map(subcategory => {
+            // Parse image data
+            const imageData = subcategory['image'] ? this.parseImageData(subcategory['image']) : null;
+
+            return {
+                ...subcategory,
+                image: imageData,
+                productCount: subcategory._count.product,
+                _count: undefined
+            };
+        });
     }
 
     async getCategoryBreadcrumb(slug: string): Promise<any> {
@@ -229,16 +252,29 @@ export class CategoryClientService {
             id: category.id,
             name: category.name,
             slug: category.slug,
-            children: category.children.map(child => ({
+            image: category['image'] ? this.parseImageData(category['image']) : null,
+            children: category.children.map((child: any) => ({
                 id: child.id,
                 name: child.name,
                 slug: child.slug,
-                children: child.children?.map(grandchild => ({
+                image: child['image'] ? this.parseImageData(child['image']) : null,
+                children: child.children?.map((grandchild: any) => ({
                     id: grandchild.id,
                     name: grandchild.name,
-                    slug: grandchild.slug
+                    slug: grandchild.slug,
+                    image: grandchild['image'] ? this.parseImageData(grandchild['image']) : null
                 })) || []
             }))
         };
+    }
+
+    private parseImageData(imageData: any): any {
+        if (!imageData) return null;
+
+        try {
+            return typeof imageData === 'string' ? JSON.parse(imageData) : imageData;
+        } catch (e) {
+            return imageData;
+        }
     }
 }

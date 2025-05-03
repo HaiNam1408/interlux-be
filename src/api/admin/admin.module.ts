@@ -11,6 +11,9 @@ import { CouponController } from './coupon/coupon.controller';
 import { CouponModule } from './coupon/coupon.module';
 import { ProductAttributeController } from './product-attribute/product-attribute.controller';
 import { ProductVariationController } from './product-variation/product-variation.controller';
+import { FilesModule } from 'src/services/file/file.module';
+import { CustomerModule } from './customer/customer.module';
+import { CustomerController } from './customer/customer.controller';
 
 @Module({
     imports: [
@@ -18,7 +21,9 @@ import { ProductVariationController } from './product-variation/product-variatio
         ProductModule,
         ProductAttributeModule,
         ProductVariationModule,
-        CouponModule
+        CouponModule,
+        CustomerModule,
+        FilesModule
     ],
     providers: [
         JwtService,
@@ -29,7 +34,8 @@ import { ProductVariationController } from './product-variation/product-variatio
         ProductController,
         ProductAttributeController,
         ProductVariationController,
-        CouponController
+        CouponController,
+        CustomerController
     ],
 })
 export class AdminModule { }

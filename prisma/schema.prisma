@@ -13,10 +13,11 @@ model User {
   email        String   @unique
   phone        String
   password     String
-  avatar       String?
+  avatar       Json?
   address      String?
   role         Role     @default(USER)
   refreshToken String?
+  status       CommonStatus @default(ACTIVE)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -33,6 +34,7 @@ model Category {
   parentId  Int?
   parent    Category?  @relation("CategoryParent", fields: [parentId], references: [id])
   children  Category[] @relation("CategoryParent")
+  image     Json?
   status    CommonStatus @default(ACTIVE)
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt

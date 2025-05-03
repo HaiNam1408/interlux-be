@@ -2,10 +2,9 @@ import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
 export async function seedUsers(prisma: PrismaClient) {
-    // Xóa dữ liệu cũ để tránh trùng lặp
     await prisma.user.deleteMany({});
 
-    // Tạo admin
+    // Create admin
     await prisma.user.create({
         data: {
             username: 'admin',
@@ -14,7 +13,11 @@ export async function seedUsers(prisma: PrismaClient) {
             password: await bcrypt.hash('Abc123456', 10),
             role: 'ADMIN',
             address: 'Số 123 Đường Nguyễn Huệ, Quận 1, TP. Hồ Chí Minh',
-            avatar: 'https://i.pravatar.cc/300?img=1',
+            avatar: {
+                fileName: 'admin-avatar.jpg',
+                filePath: 'https://avatar.windsor.io/admin-avatar',
+                type: 'image/jpeg',
+            },
         },
     });
 
@@ -26,7 +29,11 @@ export async function seedUsers(prisma: PrismaClient) {
             phone: '0901234567',
             password: await bcrypt.hash('Abc123456', 10),
             address: 'Số 45 Đường Lê Lợi, Quận 1, TP. Hồ Chí Minh',
-            avatar: 'https://i.pravatar.cc/300?img=2',
+            avatar: {
+                fileName: 'nguyenvana-avatar.jpg',
+                filePath: 'https://avatar.windsor.io/nguyenvana-avatar',
+                type: 'image/jpeg',
+            },
         },
         {
             username: 'tranthib',
@@ -34,7 +41,11 @@ export async function seedUsers(prisma: PrismaClient) {
             phone: '0912345678',
             password: await bcrypt.hash('StrongPass123', 10),
             address: 'Số 78 Đường Lê Duẩn, Quận 3, TP. Hồ Chí Minh',
-            avatar: 'https://i.pravatar.cc/300?img=3',
+            avatar: {
+                fileName: 'tranthib-avatar.jpg',
+                filePath: 'https://avatar.windsor.io/tranthib-avatar',
+                type: 'image/jpeg',
+            },
         },
         {
             username: 'lethanhc',
@@ -42,7 +53,11 @@ export async function seedUsers(prisma: PrismaClient) {
             phone: '0923456789',
             password: await bcrypt.hash('Abc123456', 10),
             address: 'Số 123 Đường Trần Hưng Đạo, Quận 5, TP. Hồ Chí Minh',
-            avatar: 'https://i.pravatar.cc/300?img=4',
+            avatar: {
+                fileName: 'lethanhc-avatar.jpg',
+                filePath: 'https://avatar.windsor.io/lethanhc-avatar',
+                type: 'image/jpeg',
+            },
         },
     ];
 
