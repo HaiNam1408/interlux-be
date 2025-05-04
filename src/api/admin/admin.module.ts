@@ -14,6 +14,8 @@ import { ProductVariationController } from './product-variation/product-variatio
 import { FilesModule } from 'src/services/file/file.module';
 import { CustomerModule } from './customer/customer.module';
 import { CustomerController } from './customer/customer.controller';
+import { OrderModule } from './order/order.module';
+import { OrderController } from './order/order.controller';
 
 @Module({
     imports: [
@@ -23,6 +25,7 @@ import { CustomerController } from './customer/customer.controller';
         ProductVariationModule,
         CouponModule,
         CustomerModule,
+        OrderModule,
         FilesModule
     ],
     providers: [
@@ -35,7 +38,8 @@ import { CustomerController } from './customer/customer.controller';
         ProductAttributeController,
         ProductVariationController,
         CouponController,
-        CustomerController
+        CustomerController,
+        OrderController
     ],
 })
 export class AdminModule { }

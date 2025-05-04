@@ -292,6 +292,7 @@ enum OrderStatus {
   DELIVERED
   COMPLETED
   CANCELLED
+  RETURNED
   REFUNDED
 }
 
