@@ -16,9 +16,12 @@ import { CustomerModule } from './customer/customer.module';
 import { CustomerController } from './customer/customer.controller';
 import { OrderModule } from './order/order.module';
 import { OrderController } from './order/order.controller';
+import { AuthModule } from './auth/auth.module';
+import { AuthController } from './auth/auth.controller';
 
 @Module({
     imports: [
+        AuthModule,
         CategoryModule,
         ProductModule,
         ProductAttributeModule,
@@ -33,6 +36,7 @@ import { OrderController } from './order/order.controller';
         PrismaService
     ],
     controllers: [
+        AuthController,
         CategoryController,
         ProductController,
         ProductAttributeController,

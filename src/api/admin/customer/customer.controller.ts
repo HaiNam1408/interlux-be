@@ -6,15 +6,15 @@ import ApiResponse from 'src/global/api.response';
 import { AuthGuard } from 'src/common/guards/auth.guard';
 import { RolesGuard } from 'src/common/guards/role.guard';
 import { Roles } from 'src/common/decorators/roles.decorators';
-import { Role } from '@prisma/client';
+import { Role } from 'src/common/enums/role.enum';
 import { resError } from 'src/global/handleError.global';
 import { FileInterceptor } from '@nestjs/platform-express';
 
 @ApiTags('Admin - Customer')
 @Controller('customer')
 @ApiBearerAuth()
-// @UseGuards(AuthGuard, RolesGuard)
-// @Roles(Role.ADMIN)
+@UseGuards(AuthGuard, RolesGuard)
+@Roles(Role.ADMIN)
 export class CustomerController {
     constructor(private readonly customerService: CustomerService) { }
 

@@ -7,18 +7,23 @@ import {
   Query,
   HttpStatus,
   ParseIntPipe,
+  UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { OrderService } from './order.service';
 import { GetAllOrdersDto, UpdateOrderStatusDto } from './dto';
 import ApiResponse from 'src/global/api.response';
 import { resError } from 'src/global/handleError.global';
+import { AuthGuard } from 'src/common/guards/auth.guard';
+import { RolesGuard } from 'src/common/guards/role.guard';
+import { Roles } from 'src/common/decorators/roles.decorators';
+import { Role } from 'src/common/enums/role.enum';
 
 @ApiTags('Admin - Order')
 @Controller('order')
 @ApiBearerAuth()
-// @UseGuards(AuthGuard, RolesGuard)
-// @Roles(Role.ADMIN)
+@UseGuards(AuthGuard, RolesGuard)
+@Roles(Role.ADMIN)
 export class OrderController {
   constructor(private readonly orderService: OrderService) {}
 

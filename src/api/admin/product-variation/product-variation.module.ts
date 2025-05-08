@@ -4,6 +4,7 @@ import { ProductVariationService } from './product-variation.service';
 import { PrismaService } from 'src/prisma.service';
 import { FilesService } from 'src/services/file/file.service';
 import { PaginationService } from 'src/utils/pagination.util';
+import { JwtService } from '@nestjs/jwt';
 
 @Module({
   controllers: [ProductVariationController],
@@ -11,7 +12,8 @@ import { PaginationService } from 'src/utils/pagination.util';
     ProductVariationService,
     PrismaService,
     FilesService,
-    PaginationService
+    PaginationService,
+    JwtService
   ],
   exports: [ProductVariationService],
 })

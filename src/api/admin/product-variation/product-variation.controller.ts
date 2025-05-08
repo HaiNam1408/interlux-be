@@ -11,6 +11,7 @@ import {
     HttpStatus,
     UseInterceptors,
     UploadedFiles,
+    UseGuards,
 } from '@nestjs/common';
 import { ProductVariationService } from './product-variation.service';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -18,10 +19,16 @@ import { CreateProductVariationDto, UpdateProductVariationDto } from './dto';
 import ApiResponse from 'src/global/api.response';
 import { resError } from 'src/global/handleError.global';
 import { FilesInterceptor } from '@nestjs/platform-express';
+import { AuthGuard } from 'src/common/guards/auth.guard';
+import { RolesGuard } from 'src/common/guards/role.guard';
+import { Roles } from 'src/common/decorators/roles.decorators';
+import { Role } from 'src/common/enums/role.enum';
 
 @ApiBearerAuth()
 @ApiTags('Admin - Product Variation')
 @Controller('product/:productId/variation')
+@UseGuards(AuthGuard, RolesGuard)
+@Roles(Role.ADMIN)
 export class ProductVariationController {
     constructor(private readonly productVariationService: ProductVariationService) { }
 
