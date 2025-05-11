@@ -27,6 +27,7 @@ deploy:
   stage: deploy
   dependencies:
     - build
+  before_script: []
   script:
     - echo "$AZURE_CREDENTIALS" > creds.json
 
