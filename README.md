@@ -32,6 +32,26 @@
 $ npm install
 ```
 
+## Connect DB
+Add .env file to root project with content:
+```bash
+DATABASE_URL="postgresql://postgres:123456@localhost:5432/interlux"
+```
+Generate prisma client:
+```bash
+$ npx prisma generate
+```
+
+Migrate database:
+```bash
+$ npx prisma migrate dev
+```
+
+Seed data:
+```bash
+$ npm run seed
+```
+
 ## Running the app
 
 ```bash

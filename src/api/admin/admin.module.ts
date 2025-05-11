@@ -18,10 +18,13 @@ import { OrderModule } from './order/order.module';
 import { OrderController } from './order/order.controller';
 import { AuthModule } from './auth/auth.module';
 import { AuthController } from './auth/auth.controller';
+import { DashboardModule } from './dashboard/dashboard.module';
+import { DashboardController } from './dashboard/dashboard.controller';
 
 @Module({
     imports: [
         AuthModule,
+        DashboardModule,
         CategoryModule,
         ProductModule,
         ProductAttributeModule,
@@ -37,6 +40,7 @@ import { AuthController } from './auth/auth.controller';
     ],
     controllers: [
         AuthController,
+        DashboardController,
         CategoryController,
         ProductController,
         ProductAttributeController,

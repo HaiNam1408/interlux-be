@@ -62,9 +62,9 @@ export async function seedProducts(prisma: PrismaClient) {
                     "Warranty": "3 years"
                 },
                 images: [
-                    "https://example.com/images/milano-sofa-1.jpg",
-                    "https://example.com/images/milano-sofa-2.jpg",
-                    "https://example.com/images/milano-sofa-3.jpg"
+                    "https://i0.wp.com/suffadesign.com/wp-content/uploads/2021/10/milano-sofa.jpg?fit=371%2C371&ssl=1",
+                    "https://i0.wp.com/suffadesign.com/wp-content/uploads/2021/10/Milano-SalaEstar-Amb_v01.jpg?fit=2154%2C1452&ssl=1",
+                    "https://i0.wp.com/suffadesign.com/wp-content/uploads/2021/10/Milano-SalaEstar-Porm_v01.jpg?w=1405&ssl=1"
                 ],
                 sort: 1,
                 status: 'ACTIVE'
@@ -82,8 +82,8 @@ export async function seedProducts(prisma: PrismaClient) {
                     "Warranty": "2 years"
                 },
                 images: [
-                    "https://example.com/images/minimalist-sofa-1.jpg",
-                    "https://example.com/images/minimalist-sofa-2.jpg"
+                    "https://www.amazon.ca/Acanva-Minimalist-Rounded-Wool-Like-Upholstered/dp/B0B31LHLM2",
+                    "https://www.amazon.com.au/Acanva-Modern-Minimalist-Rounded-Upholstered/dp/B0B31LHLM2"
                 ],
                 sort: 2,
                 status: 'ACTIVE'
@@ -101,9 +101,8 @@ export async function seedProducts(prisma: PrismaClient) {
                     "Warranty": "5 years"
                 },
                 images: [
-                    "https://example.com/images/venice-sofa-1.jpg",
-                    "https://example.com/images/venice-sofa-2.jpg",
-                    "https://example.com/images/venice-sofa-3.jpg"
+                    "https://cdn.store-assets.com/s/262752/i/32874272.jpg",
+                    "https://cdn.store-assets.com/s/262752/i/32874272.jpg",
                 ],
                 sort: 3,
                 status: 'ACTIVE'
@@ -145,8 +144,8 @@ export async function seedProducts(prisma: PrismaClient) {
                     "Warranty": "5 years"
                 },
                 images: [
-                    "https://example.com/images/harmony-bed-1.jpg",
-                    "https://example.com/images/harmony-bed-2.jpg"
+                    "https://truongthang.vn/wp-content/uploads/2024/03/Harmony-bed-1000-x-1000-3.png",
+                    "https://www.lakdi.com/cdn/shop/files/King_Size_Wooden_Bed_in_Light_Grey_Fabric_Single_Double_Head-back_with_Hydraulic_Storage_-_-3759224.jpg?v=1744030872&width=1200"
                 ],
                 sort: 1,
                 status: 'ACTIVE'
@@ -164,8 +163,8 @@ export async function seedProducts(prisma: PrismaClient) {
                     "Warranty": "3 years"
                 },
                 images: [
-                    "https://example.com/images/sofia-bed-1.jpg",
-                    "https://example.com/images/sofia-bed-2.jpg"
+                    "https://artisan-production.ams3.cdn.digitaloceanspaces.com/Latus_Table_Inspiration_1_323e92df13.png",
+                    "https://cdn.store-assets.com/s/262752/i/32874272.jpg"
                 ],
                 sort: 2,
                 status: 'ACTIVE'
@@ -208,8 +207,8 @@ export async function seedProducts(prisma: PrismaClient) {
                     "Warranty": "5 years"
                 },
                 images: [
-                    "https://example.com/images/artisan-table-1.jpg",
-                    "https://example.com/images/artisan-table-2.jpg"
+                    "https://artisan-production.ams3.cdn.digitaloceanspaces.com/Latus_Table_Inspiration_1_323e92df13.png",
+                    "https://artisan-production.ams3.cdn.digitaloceanspaces.com/Latus_Table_Inspiration_1_323e92df13.png"
                 ],
                 sort: 1,
                 status: 'ACTIVE'
@@ -227,8 +226,8 @@ export async function seedProducts(prisma: PrismaClient) {
                     "Warranty": "3 years"
                 },
                 images: [
-                    "https://example.com/images/nordic-table-1.jpg",
-                    "https://example.com/images/nordic-table-2.jpg"
+                    "https://d1u8v8zs97kc2a.cloudfront.net/product/AC011450-1/Nfp6NKdUBvgheEVqB2cvCEO7fWhmOMMxk1M6gwOy.webp",
+                    "https://d1u8v8zs97kc2a.cloudfront.net/product/AC011450-1/Nfp6NKdUBvgheEVqB2cvCEO7fWhmOMMxk1M6gwOy.webp"
                 ],
                 sort: 2,
                 status: 'ACTIVE'
@@ -257,8 +256,8 @@ export async function seedProducts(prisma: PrismaClient) {
 
     if (tvUnitCategory) {
         const tvUnitImages = convertToImageObjects([
-            "https://example.com/images/manhattan-tv-unit-1.jpg",
-            "https://example.com/images/manhattan-tv-unit-2.jpg"
+            "https://cdn.store-assets.com/s/262752/i/32874272.jpg",
+            "https://cdn.store-assets.com/s/262752/i/32874272.jpg"
         ]);
 
         await prisma.product.create({
@@ -284,8 +283,8 @@ export async function seedProducts(prisma: PrismaClient) {
 
     if (deskCategory) {
         const deskImages = convertToImageObjects([
-            "https://example.com/images/executive-desk-1.jpg",
-            "https://example.com/images/executive-desk-2.jpg"
+            "https://cdn.store-assets.com/s/262752/i/32874272.jpg",
+            "https://cdn.store-assets.com/s/262752/i/32874272.jpg"
         ]);
 
         await prisma.product.create({
