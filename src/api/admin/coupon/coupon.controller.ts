@@ -12,8 +12,8 @@ import { Role } from 'src/common/enums/role.enum';
 @ApiTags('Admin - Coupon')
 @Controller('coupon')
 @ApiBearerAuth()
-// @UseGuards(AuthGuard, RolesGuard)
-// @Roles(Role.ADMIN)
+@UseGuards(AuthGuard, RolesGuard)
+@Roles(Role.ADMIN)
 export class CouponController {
     constructor(private readonly couponService: CouponService) { }
 

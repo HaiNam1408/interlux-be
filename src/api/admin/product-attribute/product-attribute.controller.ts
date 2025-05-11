@@ -9,6 +9,7 @@ import {
     Query,
     ParseIntPipe,
     HttpStatus,
+    UseGuards,
 } from '@nestjs/common';
 import { ProductAttributeService } from './product-attribute.service';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -20,10 +21,16 @@ import {
 } from './dto';
 import ApiResponse from 'src/global/api.response';
 import { resError } from 'src/global/handleError.global';
+import { AuthGuard } from 'src/common/guards/auth.guard';
+import { RolesGuard } from 'src/common/guards/role.guard';
+import { Roles } from 'src/common/decorators/roles.decorators';
+import { Role } from 'src/common/enums/role.enum';
 
 @ApiBearerAuth()
 @ApiTags('Admin - Product Attribute')
 @Controller('product/:productId/attribute')
+@UseGuards(AuthGuard, RolesGuard)
+@Roles(Role.ADMIN)
 export class ProductAttributeController {
     constructor(private readonly productAttributeService: ProductAttributeService) { }
 

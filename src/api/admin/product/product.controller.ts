@@ -13,6 +13,7 @@ import {
     HttpException,
     HttpStatus,
     Put,
+    UseGuards,
 } from '@nestjs/common';
 import { ProductService } from './product.service';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -23,10 +24,16 @@ import { FilesInterceptor } from '@nestjs/platform-express';
 import { UpdateProductStatusDto } from './dto/update-product-status.dto';
 import ApiResponse from 'src/global/api.response';
 import { resError } from 'src/global/handleError.global';
+import { AuthGuard } from 'src/common/guards/auth.guard';
+import { RolesGuard } from 'src/common/guards/role.guard';
+import { Roles } from 'src/common/decorators/roles.decorators';
+import { Role } from 'src/common/enums/role.enum';
 
 @ApiBearerAuth()
 @ApiTags('Admin - Product')
 @Controller('product')
+@UseGuards(AuthGuard, RolesGuard)
+@Roles(Role.ADMIN)
 export class ProductController {
     constructor(
         private readonly productService: ProductService,

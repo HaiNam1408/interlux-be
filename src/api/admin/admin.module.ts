@@ -12,14 +12,26 @@ import { CouponModule } from './coupon/coupon.module';
 import { ProductAttributeController } from './product-attribute/product-attribute.controller';
 import { ProductVariationController } from './product-variation/product-variation.controller';
 import { FilesModule } from 'src/services/file/file.module';
+import { CustomerModule } from './customer/customer.module';
+import { CustomerController } from './customer/customer.controller';
+import { OrderModule } from './order/order.module';
+import { OrderController } from './order/order.controller';
+import { AuthModule } from './auth/auth.module';
+import { AuthController } from './auth/auth.controller';
+import { DashboardModule } from './dashboard/dashboard.module';
+import { DashboardController } from './dashboard/dashboard.controller';
 
 @Module({
     imports: [
+        AuthModule,
+        DashboardModule,
         CategoryModule,
         ProductModule,
         ProductAttributeModule,
         ProductVariationModule,
         CouponModule,
+        CustomerModule,
+        OrderModule,
         FilesModule
     ],
     providers: [
@@ -27,11 +39,15 @@ import { FilesModule } from 'src/services/file/file.module';
         PrismaService
     ],
     controllers: [
+        AuthController,
+        DashboardController,
         CategoryController,
         ProductController,
         ProductAttributeController,
         ProductVariationController,
-        CouponController
+        CouponController,
+        CustomerController,
+        OrderController
     ],
 })
 export class AdminModule { }

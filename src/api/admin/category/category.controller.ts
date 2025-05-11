@@ -15,8 +15,8 @@ import { resError } from 'src/global/handleError.global';
 @ApiTags('Admin - Category')
 @Controller('category')
 @ApiBearerAuth()
-// @UseGuards(AuthGuard, RolesGuard)
-// @Roles(Role.ADMIN)
+@UseGuards(AuthGuard, RolesGuard)
+@Roles(Role.ADMIN)
 export class CategoryController {
     constructor(
         private readonly categoryService: CategoryService,
