@@ -1,0 +1,21 @@
+stages:
+  - deploy
+
+deploy_backend_to_azure:
+  image: mcr.microsoft.com/azure-cli
+  stage: deploy
+  script:
+    - echo "$AZURE_CREDENTIALS" > creds.json
+    - az login --service-principal --username $(jq -r .clientId creds.json) \
+        --password $(jq -r .clientSecret creds.json) \
+        --tenant $(jq -r .tenantId creds.json)
+    - az account set --subscription $(jq -r .subscriptionId creds.json)
+
+    - zip -r interlux-be.zip dist node_modules package.json .env.production
+
+    - az webapp deployment source config-zip \
+        --resource-group $AZURE_RG \
+        --name $AZURE_APP_NAME \
+        --src backend.zip
+  only:
+    - main
