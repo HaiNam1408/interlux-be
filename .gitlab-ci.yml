@@ -14,6 +14,7 @@ before_script:
 build:
   stage: build
   script:
+    - npx prisma generate
     - npm run build
     - zip -r dist.zip dist
   artifacts:
