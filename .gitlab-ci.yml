@@ -1,21 +1,20 @@
 stages:
   - deploy
 
-deploy_backend_to_azure:
+deploy-backend:
   image: mcr.microsoft.com/azure-cli
   stage: deploy
   script:
     - echo "$AZURE_CREDENTIALS" > creds.json
-    - az login --service-principal --username $(jq -r .clientId creds.json) \
-        --password $(jq -r .clientSecret creds.json) \
-        --tenant $(jq -r .tenantId creds.json)
-    - az account set --subscription $(jq -r .subscriptionId creds.json)
 
-    - zip -r interlux-be.zip dist node_modules package.json .env.production
+    - CLIENT_ID=$(jq -r .clientId creds.json)
+    - CLIENT_SECRET=$(jq -r .clientSecret creds.json)
+    - TENANT_ID=$(jq -r .tenantId creds.json)
+    - SUBSCRIPTION_ID=$(jq -r .subscriptionId creds.json)
 
-    - az webapp deployment source config-zip \
-        --resource-group $AZURE_RG \
-        --name $AZURE_APP_NAME \
-        --src backend.zip
+    - az login --service-principal --username "$CLIENT_ID" --password "$CLIENT_SECRET" --tenant "$TENANT_ID"
+    - az account set --subscription "$SUBSCRIPTION_ID"
+
+    - az webapp deploy --resource-group Interlux_group --name interlux-backend --src-path ./dist.zip --type zip
   only:
     - main
