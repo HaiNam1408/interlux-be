@@ -53,6 +53,7 @@ model Product {
   attributes  Json?
   categoryId  Int
   category    Category      @relation(fields: [categoryId], references: [id])
+  model       Json?
   images      Json?
   sort        Int?
   status      ProductStatus @default(DRAFT)

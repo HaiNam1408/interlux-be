@@ -13,21 +13,21 @@ import {
 import { Transform } from 'class-transformer';
 
 export class CreateProductDto {
-    @ApiProperty({ description: 'Tên sản phẩm' })
+    @ApiProperty({ description: 'Product title' })
     @IsString()
     title: string;
 
-    @ApiPropertyOptional({ description: 'Mô tả sản phẩm' })
+    @ApiPropertyOptional({ description: 'Description' })
     @IsString()
     @IsOptional()
     description?: string;
 
-    @ApiProperty({ description: 'Giá sản phẩm' })
+    @ApiProperty({ description: 'Price' })
     @IsNumber()
     @Transform(({ value }) => parseFloat(value))
     price: number;
 
-    @ApiPropertyOptional({ description: 'Phần trăm giảm giá' })
+    @ApiPropertyOptional({ description: 'Percent off' })
     @IsInt()
     @IsOptional()
     @Min(0)
@@ -35,25 +35,25 @@ export class CreateProductDto {
     @Transform(({ value }) => value ? parseInt(value) : undefined)
     percentOff?: number;
 
-    @ApiPropertyOptional({ description: 'Thuộc tính sản phẩm dạng JSON' })
+    @ApiPropertyOptional({ description: 'Attributes as JSON' })
     @IsObject()
     @IsOptional()
     @Transform(({ value }) => typeof value === 'string' ? JSON.parse(value) : value)
     attributes?: object;
 
-    @ApiProperty({ description: 'ID danh mục' })
+    @ApiProperty({ description: 'Category ID' })
     @IsInt()
     @Transform(({ value }) => parseInt(value))
     categoryId: number;
 
-    @ApiPropertyOptional({ description: 'Thứ tự sắp xếp' })
+    @ApiPropertyOptional({ description: 'Sort order' })
     @IsInt()
     @IsOptional()
     @Transform(({ value }) => value ? parseInt(value) : undefined)
     sort?: number;
 
     @ApiPropertyOptional({
-        description: 'Trạng thái sản phẩm',
+        description: 'Product status',
         enum: ProductStatus,
         default: ProductStatus.DRAFT,
     })
@@ -68,4 +68,12 @@ export class CreateProductDto {
         required: true,
     })
     images: string[];
+
+    @ApiPropertyOptional({
+        description: "3D model file (supports .glb or .gltf format)",
+        type: String,
+        format: "binary",
+        required: false,
+    })
+    model3d?: string;
 }

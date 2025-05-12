@@ -142,6 +142,7 @@ export class ProductClientService {
                 price: true,
                 percentOff: true,
                 sold: true,
+                model: true,
                 images: true,
                 attributes: true,
                 category: {
@@ -283,7 +284,6 @@ export class ProductClientService {
     }
 
     async getRelatedProducts(productId: number): Promise<any> {
-        // Tìm sản phẩm hiện tại
         const currentProduct = await this.prisma.product.findUnique({
             where: { id: productId },
             select: { categoryId: true },
@@ -298,7 +298,7 @@ export class ProductClientService {
             where: {
                 categoryId: currentProduct.categoryId,
                 status: ProductStatus.ACTIVE,
-                id: { not: productId }, // Loại trừ sản phẩm hiện tại
+                id: { not: productId },
             },
             take: 8,
             include: {
@@ -356,7 +356,7 @@ export class ProductClientService {
         return this.findAll({
             page,
             limit,
-            categoryId: undefined, // Không sử dụng categoryId vì chúng ta sẽ lọc bằng điều kiện phức tạp hơn
+            categoryId: undefined,
             search,
             sortBy,
             sortDirection,
@@ -493,7 +493,6 @@ export class ProductClientService {
             if (product.price < minPrice) minPrice = product.price;
             if (product.price > maxPrice) maxPrice = product.price;
 
-            // Xử lý thuộc tính
             if (product.attributes) {
                 try {
                     const attrs = JSON.parse(product.attributes as string);
@@ -509,7 +508,6 @@ export class ProductClientService {
             }
         }
 
-        // Chuyển đổi từ Map sang đối tượng để trả về
         const attributes = {};
         attributesMap.forEach((values, key) => {
             attributes[key] = Array.from(values);

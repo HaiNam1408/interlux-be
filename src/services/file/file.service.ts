@@ -22,6 +22,13 @@ export class FilesService {
         'svg',
     ];
 
+    private readonly ALLOWED_3D_EXTENSIONS = [
+        'glb',
+        'gltf',
+    ];
+
+    private readonly MAX_3D_FILE_SIZE = 50 * 1024 * 1024; // 50MB limit
+
     constructor(private readonly configService: ConfigService) {
         this.s3 = new S3Client({
             endpoint: this.configService.get<string>('AWS_PUBLIC_END_POINT'),
@@ -33,20 +40,37 @@ export class FilesService {
         });
     }
 
-    private validateFile(filename: string, dataBuffer: Buffer) {
+    private validateFile(filename: string, dataBuffer: Buffer, is3DFile: boolean = false) {
         const fileExtension = filename.split('.').pop().toLowerCase();
-        if (!this.ALLOWED_EXTENSIONS.includes(fileExtension)) {
-            throw new HttpException(
-                `Unsupported file type. Only ${this.ALLOWED_EXTENSIONS.join(', ')} are allowed.`,
-                HttpStatus.BAD_REQUEST,
-            );
-        }
 
-        if (dataBuffer.length > this.MAX_FILE_SIZE) {
-            throw new HttpException(
-                `File size exceeds the 2MB limit.`,
-                HttpStatus.BAD_REQUEST,
-            );
+        if (is3DFile) {
+            if (!this.ALLOWED_3D_EXTENSIONS.includes(fileExtension)) {
+                throw new HttpException(
+                    `Unsupported 3D file type. Only ${this.ALLOWED_3D_EXTENSIONS.join(', ')} are allowed.`,
+                    HttpStatus.BAD_REQUEST,
+                );
+            }
+
+            if (dataBuffer.length > this.MAX_3D_FILE_SIZE) {
+                throw new HttpException(
+                    `File size exceeds the 50MB limit for 3D files.`,
+                    HttpStatus.BAD_REQUEST,
+                );
+            }
+        } else {
+            if (!this.ALLOWED_EXTENSIONS.includes(fileExtension)) {
+                throw new HttpException(
+                    `Unsupported file type. Only ${this.ALLOWED_EXTENSIONS.join(', ')} are allowed.`,
+                    HttpStatus.BAD_REQUEST,
+                );
+            }
+
+            if (dataBuffer.length > this.MAX_FILE_SIZE) {
+                throw new HttpException(
+                    `File size exceeds the 5MB limit.`,
+                    HttpStatus.BAD_REQUEST,
+                );
+            }
         }
     }
 
@@ -69,9 +93,10 @@ export class FilesService {
         filename: string,
         folder: string = 'common',
         type: string,
+        is3DFile: boolean = false,
     ): Promise<{ fileName: string; filePath: string; type: string }> {
         try {
-            this.validateFile(filename, dataBuffer);
+            this.validateFile(filename, dataBuffer, is3DFile);
             const fileExtension = filename.split(".").pop();
             const uniqueFilename = `${Date.now()}-${Math.random().toString(36).substring(2, 12)}.${fileExtension}`;
             const fileKey = `${folder}/${uniqueFilename}`;
@@ -80,16 +105,42 @@ export class FilesService {
                 Bucket: this.configService.get<string>('R2_BUCKET_NAME'),
                 Key: fileKey,
                 Body: dataBuffer,
-                ContentType: fileExtension,
+                ContentType: is3DFile
+                    ? `model/${fileExtension}`
+                    : `image/${fileExtension}`,
                 ACL: ObjectCannedACL.public_read,
             };
 
             const command = new PutObjectCommand(params);
-            const result = await this.s3.send(command);
+            await this.s3.send(command);
             return {
                 fileName: fileKey,
                 filePath: `${this.configService.get<string>('R2_PUBLIC_DOMAIN')}/${fileKey}`,
                 type: type,
+            };
+        } catch (error) {
+            throw new HttpException(error.message, error.status || 500);
+        }
+    }
+
+    public async upload3DFile(
+        dataBuffer: Buffer,
+        filename: string,
+        folder: string = '3d-models',
+    ): Promise<{ fileName: string; filePath: string; type: string; format: string }> {
+        try {
+            const fileExtension = filename.split(".").pop().toLowerCase();
+            const result = await this.uploadFile(
+                dataBuffer,
+                filename,
+                folder,
+                'model/3d',
+                true
+            );
+
+            return {
+                ...result,
+                format: fileExtension,
             };
         } catch (error) {
             throw new HttpException(error.message, error.status || 500);
@@ -102,11 +153,42 @@ export class FilesService {
             filename: string;
             folder?: string;
             type?: string;
+            is3DFile?: boolean;
         }[],
     ): Promise<{ fileName: string; filePath: string; type: string }[]> {
         try {
             const uploadPromises = files.map((file) =>
-                this.uploadFile(file.dataBuffer, file.filename, file.folder, file.type),
+                this.uploadFile(
+                    file.dataBuffer,
+                    file.filename,
+                    file.folder,
+                    file.type,
+                    file.is3DFile
+                ),
+            );
+            return await Promise.all(uploadPromises);
+        } catch (error) {
+            throw new HttpException(
+                error.message,
+                error.status || HttpStatus.INTERNAL_SERVER_ERROR,
+            );
+        }
+    }
+
+    async uploadMultiple3DFiles(
+        files: {
+            dataBuffer: Buffer;
+            filename: string;
+            folder?: string;
+        }[],
+    ): Promise<{ fileName: string; filePath: string; type: string; format: string }[]> {
+        try {
+            const uploadPromises = files.map((file) =>
+                this.upload3DFile(
+                    file.dataBuffer,
+                    file.filename,
+                    file.folder || '3d-models'
+                ),
             );
             return await Promise.all(uploadPromises);
         } catch (error) {
@@ -133,6 +215,43 @@ export class FilesService {
             fileName: attachment.fileName,
             filePath: attachment.filePath,
             type: attachment.type,
+        }));
+    }
+
+    async upload3DModels(
+        files: Express.Multer.File[],
+        folder: string = '3d-models',
+    ): Promise<Record<string, any>[]> {
+        for (const file of files) {
+            const fileExtension = file.originalname.split('.').pop().toLowerCase();
+            if (!this.ALLOWED_3D_EXTENSIONS.includes(fileExtension)) {
+                throw new HttpException(
+                    `Unsupported 3D file type: ${fileExtension}. Only ${this.ALLOWED_3D_EXTENSIONS.join(', ')} are allowed.`,
+                    HttpStatus.BAD_REQUEST,
+                );
+            }
+
+            if (file.size > this.MAX_3D_FILE_SIZE) {
+                throw new HttpException(
+                    `File size exceeds the 50MB limit for 3D files.`,
+                    HttpStatus.BAD_REQUEST,
+                );
+            }
+        }
+
+        const models = await this.uploadMultiple3DFiles(
+            files.map((file) => ({
+                dataBuffer: file.buffer,
+                filename: file.originalname,
+                folder,
+            })),
+        );
+
+        return models.map((model) => ({
+            fileName: model.fileName,
+            filePath: model.filePath,
+            type: model.type,
+            format: model.format,
         }));
     }
 
