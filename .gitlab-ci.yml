@@ -15,9 +15,10 @@ build:
   stage: build
   script:
     - npx prisma generate
+    - npx prisma migrate deploy
     - npm run build
     - apt-get update && apt-get install -y zip
-    - zip -r dist.zip dist package.json package-lock.json
+    - zip -r dist.zip dist prisma package.json package-lock.json
   artifacts:
     paths:
       - dist.zip
