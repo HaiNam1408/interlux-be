@@ -15,6 +15,7 @@ export class ProductClientService {
         page?: number;
         limit?: number;
         categoryId?: number;
+        categoryIds?: number[];
         search?: string;
         sortBy?: string;
         sortDirection?: 'asc' | 'desc';
@@ -26,6 +27,7 @@ export class ProductClientService {
             page = 1,
             limit = 10,
             categoryId,
+            categoryIds,
             search,
             sortBy = 'createdAt',
             sortDirection = 'desc',
@@ -34,13 +36,16 @@ export class ProductClientService {
             attributes,
         } = params;
 
-        // Chỉ lấy sản phẩm có trạng thái ACTIVE
         const where: any = {
             status: ProductStatus.ACTIVE,
         };
 
         if (categoryId) {
             where.categoryId = categoryId;
+        }
+
+        if (categoryIds) {
+            where.categoryId = { in: categoryIds };
         }
 
         if (search) {
@@ -328,7 +333,6 @@ export class ProductClientService {
             attributes?: string;
         },
     ): Promise<any> {
-        // Tìm ID của danh mục từ slug
         const category = await this.prisma.category.findUnique({
             where: { slug: categorySlug },
             include: { children: true },
@@ -338,10 +342,8 @@ export class ProductClientService {
             throw new HttpException('Category not found', HttpStatus.NOT_FOUND);
         }
 
-        // Tạo mảng ID của danh mục và tất cả danh mục con
         const categoryIds = [category.id, ...category.children.map((child: any) => child.id)];
 
-        // Gọi lại hàm findAll với categoryIds
         const {
             page = 1,
             limit = 10,
@@ -356,7 +358,7 @@ export class ProductClientService {
         return this.findAll({
             page,
             limit,
-            categoryId: undefined,
+            categoryIds,
             search,
             sortBy,
             sortDirection,
