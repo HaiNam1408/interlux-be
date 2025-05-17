@@ -18,7 +18,7 @@ build:
     - npx prisma migrate deploy
     - npm run build
     - apt-get update && apt-get install -y zip
-    - zip -r dist.zip dist prisma node_modules package.json package-lock.json
+    - zip -r dist.zip dist prisma package.json package-lock.json
   artifacts:
     paths:
       - dist.zip
