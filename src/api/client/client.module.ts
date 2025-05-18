@@ -20,6 +20,9 @@ import { CategoryClientModule } from './category/category.module';
 import { NotificationModule } from './notification/notification.module';
 import { NotificationController } from './notification/notification.controller';
 import { NotificationService, NotificationTemplateService } from 'src/services/notification';
+import { BlogClientModule } from './blog/blog.module';
+import { BlogClientController } from './blog/blog.controller';
+import { BlogClientService } from './blog/blog.service';
 
 @Module({
     imports: [
@@ -31,6 +34,7 @@ import { NotificationService, NotificationTemplateService } from 'src/services/n
         CouponModule,
         ProductClientModule,
         NotificationModule,
+        BlogClientModule,
     ],
     providers: [
         JwtService,
@@ -38,7 +42,8 @@ import { NotificationService, NotificationTemplateService } from 'src/services/n
         ProductClientService,
         PaginationService,
         NotificationService,
-        NotificationTemplateService
+        NotificationTemplateService,
+        BlogClientService
     ],
     controllers: [
         AuthController,
@@ -49,6 +54,7 @@ import { NotificationService, NotificationTemplateService } from 'src/services/n
         CouponController,
         PaymentController,
         NotificationController,
+        BlogClientController,
     ],
 })
 export class ClientModule { }

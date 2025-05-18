@@ -11,5 +11,8 @@ export enum TableName {
     ORDER_ITEM = 'OrderItem',
     PAYMENT = 'Payment',
     SHIPPING = 'Shipping',
-    COUPON = 'Coupon'
+    COUPON = 'Coupon',
+    POST = 'Post',
+    TAG = 'Tag',
+    POST_TAG = 'PostTag'
 }

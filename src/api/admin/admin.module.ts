@@ -20,6 +20,10 @@ import { AuthModule } from './auth/auth.module';
 import { AuthController } from './auth/auth.controller';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { DashboardController } from './dashboard/dashboard.controller';
+import { BlogModule } from './blog/blog.module';
+import { BlogController } from './blog/blog.controller';
+import { TagModule } from './tag/tag.module';
+import { TagController } from './tag/tag.controller';
 
 @Module({
     imports: [
@@ -32,7 +36,9 @@ import { DashboardController } from './dashboard/dashboard.controller';
         CouponModule,
         CustomerModule,
         OrderModule,
-        FilesModule
+        FilesModule,
+        BlogModule,
+        TagModule
     ],
     providers: [
         JwtService,
@@ -47,7 +53,9 @@ import { DashboardController } from './dashboard/dashboard.controller';
         ProductVariationController,
         CouponController,
         CustomerController,
-        OrderController
+        OrderController,
+        BlogController,
+        TagController
     ],
 })
 export class AdminModule { }

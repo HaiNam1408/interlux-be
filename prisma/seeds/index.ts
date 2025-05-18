@@ -7,6 +7,8 @@ import { seedProductVariations } from './05-product-variations';
 import { seedCoupons } from './06-coupons';
 import { seedShipping } from './07-shipping';
 import { seedOrders } from './08-order';
+import { seedTags } from './09-tags';
+import { seedBlogPosts } from './10-blog-posts';
 
 const prisma = new PrismaClient();
 
@@ -36,6 +38,12 @@ async function main() {
 
     console.log('Seeding orders...');
     await seedOrders(prisma);
+
+    console.log('Seeding blog tags...');
+    await seedTags(prisma);
+
+    console.log('Seeding blog posts...');
+    await seedBlogPosts(prisma);
 
     console.log('✅ Seeding completed!');
 }
