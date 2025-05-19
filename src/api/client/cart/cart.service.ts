@@ -7,20 +7,34 @@ export class CartService {
     constructor(private prisma: PrismaService) { }
 
     async getOrCreateCart(userId: number): Promise<any> {
-        // Tìm giỏ hàng của user
         let cart = await this.prisma.cart.findFirst({
             where: { userId },
             include: {
                 items: {
                     include: {
-                        product: true,
+                        product: {
+                            select: {
+                                id: true,
+                                title: true,
+                                price: true,
+                                percentOff: true,
+                                images: true,
+                            },
+                        },
                         productVariation: {
-                            include: {
+                            select: {
+                                id: true,
+                                productId: true,
+                                sku: true,
+                                price: true,
+                                percentOff: true,
+                                images: true,
                                 attributeValues: {
-                                    include: {
+                                    select: {
                                         attributeValue: {
-                                            include: {
-                                                attribute: true,
+                                            select: {
+                                                name: true,
+                                                value: true
                                             },
                                         },
                                     },
@@ -32,53 +46,46 @@ export class CartService {
             },
         });
 
-        // Nếu chưa có giỏ hàng, tạo giỏ hàng mới
         if (!cart) {
             const newCart = await this.prisma.cart.create({
                 data: { userId },
             });
 
-            // Fetch cart with items
-            cart = await this.prisma.cart.findUnique({
-                where: { id: newCart.id },
-                include: {
-                    items: {
-                        include: {
-                            product: true,
-                            productVariation: {
-                                include: {
-                                    attributeValues: {
-                                        include: {
-                                            attributeValue: {
-                                                include: {
-                                                    attribute: true,
-                                                },
-                                            },
-                                        },
-                                    },
-                                },
-                            },
-                        },
-                    },
-                },
-            });
-
-            // If cart is still null, initialize with empty items array
-            if (!cart) {
-                cart = {
-                    ...newCart,
-                    items: []
-                };
-            }
+            cart = {
+                ...newCart,
+                items: [],
+            };
         }
 
-        return cart;
+        const updatedItems = cart.items.map((item) => {
+            if (item.productVariation) {
+                return {
+                    ...item,
+                    product: {
+                        id: item.productVariation.id,
+                        title: item.product?.title,
+                        price: item.productVariation.price,
+                        percentOff: item.productVariation.percentOff,
+                        images: item.productVariation.images,
+                        attributeValues: item.productVariation.attributeValues,
+                    },
+                };
+            }
+            item.productVariation = undefined
+            
+            return item;
+        });
+
+        return {
+            ...cart,
+            items: updatedItems,
+        };
     }
+    
 
     async addToCart(userId: number, addToCartDto: AddToCartDto) {
         const { productId, productVariationId, quantity } = addToCartDto;
 
-        // Kiểm tra sản phẩm có tồn tại không
         const product = await this.prisma.product.findUnique({
             where: { id: productId },
         });
@@ -87,7 +94,6 @@ export class CartService {
             throw new NotFoundException('Sản phẩm không tồn tại');
         }
 
-        // Kiểm tra biến thể sản phẩm (nếu có)
         if (productVariationId) {
             const productVariation = await this.prisma.productVariation.findUnique({
                 where: { id: productVariationId },
@@ -97,16 +103,13 @@ export class CartService {
                 throw new NotFoundException('Biến thể sản phẩm không tồn tại');
             }
 
-            // Kiểm tra số lượng tồn kho của biến thể
             if (productVariation.inventory < quantity) {
                 throw new BadRequestException('Số lượng sản phẩm trong kho không đủ');
             }
         }
 
-        // Lấy hoặc tạo giỏ hàng cho user
         const cart = await this.getOrCreateCart(userId);
 
-        // Kiểm tra xem sản phẩm đã có trong giỏ hàng chưa
         const existingCartItem = await this.prisma.cartItem.findFirst({
             where: {
                 cartId: cart.id,
@@ -210,7 +213,6 @@ export class CartService {
     }
 
     async getCartSummary(cart: any) {
-        // Tính tổng số lượng sản phẩm và tổng tiền
         let totalItems = 0;
         let subtotal = 0;
 
@@ -221,11 +223,6 @@ export class CartService {
                 // Sử dụng giá của biến thể nếu có, nếu không thì dùng giá của sản phẩm
                 let itemPrice = item.product.price;
                 let itemDiscount = item.product.percentOff || 0;
-
-                if (item.productVariation?.price) {
-                    itemPrice = item.productVariation.price;
-                    itemDiscount = item.productVariation.percentOff || 0;
-                }
 
                 const discountedPrice = itemPrice * (1 - itemDiscount / 100);
                 subtotal += discountedPrice * item.quantity;

@@ -15,7 +15,7 @@ export class TagService {
 
     async findAll(page: number = 1, limit: number = 10, search?: string): Promise<any> {
         const where: any = {};
-        
+
         if (search) {
             where.name = { contains: search, mode: 'insensitive' };
         }
@@ -49,7 +49,10 @@ export class TagService {
             _count: undefined
         }));
 
-        return transformedData;
+        return {
+            ...result,
+            data: transformedData
+        };
     }
 
     async findOne(id: number): Promise<any> {
@@ -100,7 +103,7 @@ export class TagService {
 
     async create(createTagDto: CreateTagDto): Promise<any> {
         const slug = SlugUtil.createSlug(createTagDto.name);
-        
+
         const existingTag = await this.prisma.tag.findUnique({
             where: { slug }
         });

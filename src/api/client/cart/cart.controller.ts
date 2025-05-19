@@ -28,7 +28,7 @@ export class CartController {
         const cart = await this.cartService.getOrCreateCart(req.user.userId);
         const summary = await this.cartService.getCartSummary(cart);
         return ApiResponse.success({
-            cart,
+            ...cart,
             summary
         });
     }
@@ -39,10 +39,9 @@ export class CartController {
         const cart = await this.cartService.addToCart(req.user.userId, addToCartDto);
         const summary = await this.cartService.getCartSummary(cart);
         return ApiResponse.success({
-            cart,
+            ...cart,
             summary,
-            message: 'Product added to cart successfully'
-        });
+        }, 'Product added to cart successfully');
     }
 
     @Put('item')
@@ -52,9 +51,8 @@ export class CartController {
         const summary = await this.cartService.getCartSummary(cart);
         return ApiResponse.success({
             cart,
-            summary,
-            message: 'Cart updated successfully'
-        });
+            ...summary,
+        }, 'Cart updated successfully');
     }
 
     @Delete('item/:id')
@@ -63,10 +61,9 @@ export class CartController {
         const cart = await this.cartService.removeCartItem(req.user.userId, +cartItemId);
         const summary = await this.cartService.getCartSummary(cart);
         return ApiResponse.success({
-            cart,
+            ...cart,
             summary,
-            message: 'Product removed from cart successfully'
-        });
+        }, 'Product removed from cart successfully');
     }
 
     @Delete()
@@ -75,9 +72,8 @@ export class CartController {
         const cart = await this.cartService.clearCart(req.user.userId);
         const summary = await this.cartService.getCartSummary(cart);
         return ApiResponse.success({
-            cart,
+            ...cart,
             summary,
-            message: 'Cart cleared successfully'
-        });
+        }, 'Cart cleared successfully');
     }
 }

@@ -204,14 +204,10 @@ export class BlogService {
         }
 
         // Handle thumbnail
-        let thumbnailData = existingPost.thumbnail ? JSON.parse(existingPost.thumbnail as string) : null;
-        
-        // Remove thumbnail if requested
+        let thumbnailData = existingPost.thumbnail;
         if (updatePostDto.removeThumbnail) {
             thumbnailData = null;
-        }
-        // Upload new thumbnail if provided
-        else if (thumbnail) {
+        } else if (thumbnail) {
             thumbnailData = await this.filesService.uploadFile(
                 thumbnail.buffer,
                 thumbnail.originalname,
