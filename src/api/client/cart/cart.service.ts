@@ -69,11 +69,14 @@ export class CartService {
                         images: item.productVariation.images,
                         attributeValues: item.productVariation.attributeValues,
                     },
+                    productVariation: undefined,
                 };
             }
-            item.productVariation = undefined
             
-            return item;
+            return {
+                ...item,
+                productVariation: undefined,
+            };
         });
 
         return {
@@ -118,14 +121,12 @@ export class CartService {
             },
         });
 
-        // Nếu sản phẩm đã tồn tại trong giỏ hàng, cập nhật số lượng
         if (existingCartItem) {
             await this.prisma.cartItem.update({
                 where: { id: existingCartItem.id },
                 data: { quantity: existingCartItem.quantity + quantity },
             });
         } else {
-            // Thêm sản phẩm mới vào giỏ hàng
             await this.prisma.cartItem.create({
                 data: {
                     cartId: cart.id,
@@ -136,14 +137,12 @@ export class CartService {
             });
         }
 
-        // Trả về giỏ hàng đã cập nhật
         return this.getOrCreateCart(userId);
     }
 
     async updateCartItem(userId: number, updateCartItemDto: UpdateCartItemDto) {
         const { cartItemId, quantity } = updateCartItemDto;
 
-        // Tìm mục trong giỏ hàng
         const cartItem = await this.prisma.cartItem.findUnique({
             where: { id: cartItemId },
             include: { cart: true, productVariation: true },
@@ -153,30 +152,25 @@ export class CartService {
             throw new NotFoundException('Mục trong giỏ hàng không tồn tại');
         }
 
-        // Kiểm tra xem giỏ hàng có thuộc về user không
         if (cartItem.cart.userId !== userId) {
             throw new BadRequestException('Bạn không có quyền sửa đổi giỏ hàng này');
         }
 
-        // Kiểm tra số lượng tồn kho nếu có biến thể
         if (cartItem.productVariationId) {
             if (cartItem.productVariation.inventory < quantity) {
                 throw new BadRequestException('Số lượng sản phẩm trong kho không đủ');
             }
         }
 
-        // Cập nhật số lượng
         await this.prisma.cartItem.update({
             where: { id: cartItemId },
             data: { quantity },
         });
 
-        // Trả về giỏ hàng đã cập nhật
         return this.getOrCreateCart(userId);
     }
 
     async removeCartItem(userId: number, cartItemId: number) {
-        // Tìm mục trong giỏ hàng
         const cartItem = await this.prisma.cartItem.findUnique({
             where: { id: cartItemId },
             include: { cart: true },
@@ -186,29 +180,24 @@ export class CartService {
             throw new NotFoundException('Mục trong giỏ hàng không tồn tại');
         }
 
-        // Kiểm tra xem giỏ hàng có thuộc về user không
         if (cartItem.cart.userId !== userId) {
             throw new BadRequestException('Bạn không có quyền sửa đổi giỏ hàng này');
         }
 
-        // Xóa mục khỏi giỏ hàng
         await this.prisma.cartItem.delete({
             where: { id: cartItemId },
         });
 
-        // Trả về giỏ hàng đã cập nhật
         return this.getOrCreateCart(userId);
     }
 
     async clearCart(userId: number) {
         const cart = await this.getOrCreateCart(userId);
 
-        // Xóa tất cả các mục trong giỏ hàng
         await this.prisma.cartItem.deleteMany({
             where: { cartId: cart.id },
         });
 
-        // Trả về giỏ hàng trống
         return this.getOrCreateCart(userId);
     }
 
@@ -219,8 +208,6 @@ export class CartService {
         if (cart && cart.items) {
             for (const item of cart.items) {
                 totalItems += item.quantity;
-
-                // Sử dụng giá của biến thể nếu có, nếu không thì dùng giá của sản phẩm
                 let itemPrice = item.product.price;
                 let itemDiscount = item.product.percentOff || 0;
 
