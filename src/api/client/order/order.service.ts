@@ -1,4 +1,4 @@
-// api/client/order/order.service.ts
+import { MailService } from './../../../services/mail/mail.service';
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../../prisma.service';
 import { CreateOrderDto } from './dto';
@@ -12,6 +12,7 @@ export class OrderService {
         private prisma: PrismaService,
         private cartService: CartService,
         private notificationService: NotificationService,
+        private mailService: MailService
     ) { }
 
     async createOrder(userId: number, createOrderDto: CreateOrderDto) {
@@ -24,7 +25,6 @@ export class OrderService {
             note,
         } = createOrderDto;
 
-        // Check if shipping method exists
         const shipping = await this.prisma.shipping.findUnique({
             where: { id: shippingId },
         });
@@ -33,7 +33,6 @@ export class OrderService {
             throw new NotFoundException('Shipping method not found');
         }
 
-        // Check coupon code if provided
         let coupon = null;
         let discountAmount = 0;
 
@@ -46,22 +45,18 @@ export class OrderService {
                 throw new NotFoundException('Coupon code not found');
             }
 
-            // Check if coupon is still valid
             const now = new Date();
             if (coupon.startDate > now || coupon.endDate < now) {
                 throw new BadRequestException('Coupon has expired or is not yet active');
             }
 
-            // Check remaining usage count
             if (coupon.maxUsage && coupon.usageCount >= coupon.maxUsage) {
                 throw new BadRequestException('Coupon has reached maximum usage limit');
             }
         }
 
-        // Get user's current cart with items
         const cart = await this.cartService.getOrCreateCart(userId);
 
-        // Check if cart has products
         if (!cart.items || cart.items.length === 0) {
             throw new BadRequestException('Your cart is empty');
         }
@@ -70,9 +65,7 @@ export class OrderService {
         let subtotal = 0;
         const orderItems = [];
 
-        // Prepare data for order items
         for (const item of cart.items || []) {
-            // Get product and variation information
             const product = await this.prisma.product.findUnique({
                 where: { id: item.productId },
             });
@@ -105,17 +98,14 @@ export class OrderService {
                     throw new NotFoundException(`Product variation with ID ${item.productVariationId} not found`);
                 }
 
-                // Check inventory
                 if (productVariation.inventory < item.quantity) {
                     throw new BadRequestException(`Product "${product.title}" only has ${productVariation.inventory} items in stock`);
                 }
 
-                // Use variation price if available
                 if (productVariation.price) {
                     itemPrice = productVariation.price;
                 }
 
-                // Use variation discount if available
                 if (productVariation.percentOff !== null) {
                     itemDiscount = productVariation.percentOff;
                 }
@@ -130,6 +120,8 @@ export class OrderService {
                 title: product.title,
                 slug: product.slug,
                 images: product.images,
+                price: product.price,
+                percentOff: product.percentOff,
                 attributes: product.attributes,
             };
 
@@ -138,6 +130,8 @@ export class OrderService {
                 variationMetadata = {
                     sku: productVariation.sku,
                     images: productVariation.images,
+                    price: productVariation.price,
+                    percentOff: productVariation.percentOff,
                     attributes: productVariation.attributeValues ?
                         productVariation.attributeValues.map(av => ({
                             name: av.attributeValue?.attribute?.name || 'Unknown',
@@ -146,7 +140,6 @@ export class OrderService {
                 };
             }
 
-            // Add to order items list
             orderItems.push({
                 productId: item.productId,
                 productVariationId: item.productVariationId || null,
@@ -161,7 +154,6 @@ export class OrderService {
             });
         }
 
-        // Calculate discount from coupon if available
         if (coupon) {
             if (coupon.type === 'PERCENTAGE') {
                 discountAmount = subtotal * (coupon.value / 100);
@@ -169,21 +161,15 @@ export class OrderService {
                 discountAmount = coupon.value;
             }
 
-            // Check minimum purchase requirement
             if (coupon.minPurchase && subtotal < coupon.minPurchase) {
                 throw new BadRequestException(`Minimum purchase amount to use this coupon is ${coupon.minPurchase}`);
             }
         }
 
-        // Calculate final total
         const shippingFee = shipping.price;
-        const tax = 0; // Can calculate tax if needed
-        const total = subtotal + shippingFee + tax - discountAmount;
-
-        // Create order number
+        const total = subtotal + shippingFee - discountAmount;
         const orderNumber = `ORD${Date.now()}${Math.floor(Math.random() * 1000)}`;
 
-        // Initialize payment
         const payment = await this.prisma.payment.create({
             data: {
                 amount: total,
@@ -198,20 +184,18 @@ export class OrderService {
             },
         });
 
-        // Create new order
         const order = await this.prisma.order.create({
             data: {
                 orderNumber,
                 userId,
                 subtotal,
                 shippingFee,
-                tax,
                 discount: discountAmount,
                 total,
                 paymentId: payment.id,
                 shippingId,
                 couponId: coupon?.id,
-                status: OrderStatus.PENDING,
+                status: paymentMethod == PaymentMethod.COD ? OrderStatus.CONFIRMED : OrderStatus.PENDING,
                 note,
                 shippingAddress: shippingAddress as any,
                 billingAddress: billingAddress as any || shippingAddress as any,
@@ -220,6 +204,7 @@ export class OrderService {
                 },
             },
             include: {
+                user: true,
                 items: true,
                 payment: true,
                 shipping: true,
@@ -227,7 +212,6 @@ export class OrderService {
             },
         });
 
-        // Update coupon usage count
         if (coupon) {
             await this.prisma.coupon.update({
                 where: { id: coupon.id },
@@ -235,7 +219,6 @@ export class OrderService {
             });
         }
 
-        // Update product inventory
         for (const item of cart.items || []) {
             if (item.productVariationId) {
                 await this.prisma.productVariation.update({
@@ -244,17 +227,13 @@ export class OrderService {
                 });
             }
 
-            // Update product sold count
             await this.prisma.product.update({
                 where: { id: item.productId },
                 data: { sold: { increment: item.quantity } },
             });
         }
 
-        // Clear cart after successful order creation
         await this.cartService.clearCart(userId);
-
-        // Send order created notification
         await this.notificationService.createFromTemplate(
             userId,
             'ORDER_CREATED',
@@ -266,6 +245,18 @@ export class OrderService {
             order.id,
             'Order'
         );
+
+        if (paymentMethod == PaymentMethod.COD) {
+            try {
+                await this.mailService.sendOrderSuccessEmail(
+                    order.user.email,
+                    order.user.username,
+                    order
+                );
+            } catch (emailError) {
+                console.error('Failed to send order confirmation email:', emailError);
+            }
+        }
 
         return order;
     }
@@ -322,7 +313,6 @@ export class OrderService {
             throw new BadRequestException('You do not have permission to cancel this order');
         }
 
-        // Can only cancel orders in PENDING or CONFIRMED status
         if (order.status !== OrderStatus.PENDING && order.status !== OrderStatus.CONFIRMED) {
             throw new BadRequestException('Cannot cancel order in current status');
         }
@@ -339,7 +329,6 @@ export class OrderService {
             },
         });
 
-        // Update payment status
         await this.prisma.payment.update({
             where: { id: order.paymentId },
             data: { status: PaymentStatus.CANCELLED },
@@ -354,18 +343,9 @@ export class OrderService {
                 });
             }
 
-            // Decrease product sold count
             await this.prisma.product.update({
                 where: { id: item.productId },
                 data: { sold: { decrement: item.quantity } },
-            });
-        }
-
-        // Decrease coupon usage count if applicable
-        if (order.couponId) {
-            await this.prisma.coupon.update({
-                where: { id: order.couponId },
-                data: { usageCount: { decrement: 1 } },
             });
         }
 
@@ -377,163 +357,5 @@ export class OrderService {
             where: { status: 'ACTIVE' },
             orderBy: { price: 'asc' },
         });
-    }
-
-    // Method to create order from Admin
-    async createOrderByAdmin(adminId: number, userId: number, createOrderDto: CreateOrderDto) {
-        // Check if user exists
-        const user = await this.prisma.user.findUnique({
-            where: { id: userId },
-        });
-
-        if (!user) {
-            throw new NotFoundException('User not found');
-        }
-
-        // Use the same order creation logic as createOrder
-        return this.createOrder(userId, createOrderDto);
-    }
-
-    // Method to update order status from Admin
-    async updateOrderStatus(adminId: number, orderId: number, status: OrderStatus) {
-        const order = await this.prisma.order.findUnique({
-            where: { id: orderId },
-        });
-
-        if (!order) {
-            throw new NotFoundException('Order not found');
-        }
-
-        // Check status transition logic
-        if (order.status === OrderStatus.CANCELLED) {
-            throw new BadRequestException('Cannot update cancelled order');
-        }
-
-        if (order.status === OrderStatus.COMPLETED && status !== OrderStatus.REFUNDED) {
-            throw new BadRequestException('Cannot change status of completed order');
-        }
-
-        // Update order status
-        const updatedOrder = await this.prisma.order.update({
-            where: { id: orderId },
-            data: { status },
-            include: {
-                items: true,
-                payment: true,
-                shipping: true,
-                coupon: true,
-                user: true,
-            },
-        });
-
-        // Update corresponding payment status
-        let paymentStatus: PaymentStatus;
-        switch (status) {
-            case OrderStatus.COMPLETED:
-                paymentStatus = PaymentStatus.COMPLETED;
-                break;
-            case OrderStatus.CANCELLED:
-                paymentStatus = PaymentStatus.CANCELLED;
-                break;
-            case OrderStatus.REFUNDED:
-                paymentStatus = PaymentStatus.REFUNDED;
-                break;
-            default:
-                paymentStatus = PaymentStatus.PROCESSING;
-        }
-
-        // Send notification based on the new status
-        if (updatedOrder.user) {
-            const userId = updatedOrder.user.id;
-
-            switch (status) {
-                case OrderStatus.PROCESSING:
-                    await this.notificationService.createFromTemplate(
-                        userId,
-                        'ORDER_CONFIRMED',
-                        { orderNumber: updatedOrder.orderNumber },
-                        orderId,
-                        'Order'
-                    );
-                    break;
-                case OrderStatus.SHIPPED:
-                    await this.notificationService.createFromTemplate(
-                        userId,
-                        'ORDER_SHIPPED',
-                        { orderNumber: updatedOrder.orderNumber },
-                        orderId,
-                        'Order'
-                    );
-                    break;
-                case OrderStatus.COMPLETED:
-                    await this.notificationService.createFromTemplate(
-                        userId,
-                        'ORDER_DELIVERED',
-                        { orderNumber: updatedOrder.orderNumber },
-                        orderId,
-                        'Order'
-                    );
-                    break;
-                case OrderStatus.CANCELLED:
-                    await this.notificationService.createFromTemplate(
-                        userId,
-                        'ORDER_CANCELLED',
-                        {
-                            orderNumber: updatedOrder.orderNumber,
-                            reason: 'Order cancelled by admin'
-                        },
-                        orderId,
-                        'Order'
-                    );
-                    break;
-                case OrderStatus.REFUNDED:
-                    await this.notificationService.createFromTemplate(
-                        userId,
-                        'PAYMENT_REFUNDED',
-                        {
-                            orderNumber: updatedOrder.orderNumber,
-                            amount: updatedOrder.total,
-                            currency: 'VND'
-                        },
-                        orderId,
-                        'Order'
-                    );
-                    break;
-            }
-        }
-
-        await this.prisma.payment.update({
-            where: { id: order.paymentId },
-            data: { status: paymentStatus },
-        });
-
-        // Process inventory return if order is cancelled
-        if (status === OrderStatus.CANCELLED || status === OrderStatus.REFUNDED) {
-            // Return products to inventory
-            for (const item of updatedOrder.items) {
-                if (item.productVariationId) {
-                    await this.prisma.productVariation.update({
-                        where: { id: item.productVariationId },
-                        data: { inventory: { increment: item.quantity } },
-                    });
-                }
-
-                // Decrease product sold count
-                await this.prisma.product.update({
-                    where: { id: item.productId },
-                    data: { sold: { decrement: item.quantity } },
-                });
-            }
-
-            // Decrease coupon usage count if applicable
-            if (order.couponId) {
-                await this.prisma.coupon.update({
-                    where: { id: order.couponId },
-                    data: { usageCount: { decrement: 1 } },
-                });
-            }
-        }
-
-        return updatedOrder;
     }
 }

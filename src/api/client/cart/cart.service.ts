@@ -99,7 +99,7 @@ export class CartService {
 
         if (productVariationId) {
             const productVariation = await this.prisma.productVariation.findUnique({
-                where: { id: productVariationId },
+                where: { id: productVariationId, productId },
             });
 
             if (!productVariation) {

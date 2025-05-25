@@ -3,7 +3,6 @@ import { PaymentStrategy } from './payment-strategy.interface';
 import { VNPayStrategy } from './vnpay-strategy';
 import { MomoStrategy } from './momo-strategy';
 import { PayPalStrategy } from './paypal-strategy';
-import { CodStrategy } from './cod-strategy';
 import { PaymentMethod } from '@prisma/client';
 
 @Injectable()
@@ -12,7 +11,6 @@ export class PaymentStrategyFactory {
     private vnpayStrategy: VNPayStrategy,
     private momoStrategy: MomoStrategy,
     private paypalStrategy: PayPalStrategy,
-    private codStrategy: CodStrategy,
   ) {}
 
   getStrategy(paymentMethod: string): PaymentStrategy {
@@ -23,8 +21,6 @@ export class PaymentStrategyFactory {
         return this.momoStrategy;
       case PaymentMethod.PAYPAL:
         return this.paypalStrategy;
-      case PaymentMethod.COD:
-        return this.codStrategy;
       default:
         throw new Error(`Payment method ${paymentMethod} not supported`);
     }

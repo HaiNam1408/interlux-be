@@ -38,7 +38,7 @@ export class PaymentController {
         const payment = await this.paymentService.verifyPayment(req.user.userId, verifyPaymentDto);
         return ApiResponse.success({
             payment,
-            message: 'Thanh toán đã được xác nhận thành công',
+            message: 'Payment verified successfully',
         });
     }
 

@@ -9,10 +9,10 @@ import {
   VNPayStrategy,
   MomoStrategy,
   PayPalStrategy,
-  CodStrategy
 } from './strategies';
 import { NotificationModule } from 'src/services/notification/notification.module';
 import { NotificationService } from 'src/services/notification';
+import { MailService } from 'src/services/mail/mail.service';
 
 @Module({
   imports: [ConfigModule, NotificationModule],
@@ -26,8 +26,8 @@ import { NotificationService } from 'src/services/notification';
     VNPayStrategy,
     MomoStrategy,
     PayPalStrategy,
-    CodStrategy,
-    NotificationService
+    NotificationService,
+    MailService
   ],
   exports: [PaymentService],
 })

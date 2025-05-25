@@ -4,13 +4,15 @@ import { VerifyPaymentDto } from './dto';
 import { OrderStatus, PaymentStatus } from '@prisma/client';
 import { PaymentStrategyFactory } from './strategies';
 import { NotificationService } from 'src/services/notification/notification.service';
+import { MailService } from 'src/services/mail/mail.service';
 
 @Injectable()
 export class PaymentService {
     constructor(
         private prisma: PrismaService,
         private paymentStrategyFactory: PaymentStrategyFactory,
-        private notificationService: NotificationService
+        private notificationService: NotificationService,
+        private mailService: MailService
     ) { }
 
     async getPaymentDetail(userId: number, paymentId: number) {
@@ -43,10 +45,31 @@ export class PaymentService {
     async verifyPayment(userId: number, verifyPaymentDto: VerifyPaymentDto) {
         const { orderId, transactionId, metadata } = verifyPaymentDto;
 
-        // Find the order
         const order = await this.prisma.order.findUnique({
             where: { id: orderId },
-            include: { payment: true },
+            include: {
+                payment: true,
+                user: {
+                    select: {
+                        id: true,
+                        email: true,
+                        username: true
+                    }
+                },
+                items: {
+                    include: {
+                        product: {
+                            select: {
+                                id: true,
+                                title: true,
+                                slug: true,
+                                images: true,
+                            }
+                        },
+                        productVariation: true
+                    }
+                }
+            },
         });
 
         if (!order) {
@@ -57,7 +80,6 @@ export class PaymentService {
             throw new BadRequestException('You do not have permission to update this payment information');
         }
 
-        // Check order status, can only update if the order is PENDING
         if (order.status !== OrderStatus.PENDING && order.status !== OrderStatus.PROCESSING) {
             throw new BadRequestException('Cannot update payment information for this order');
         }
@@ -77,6 +99,32 @@ export class PaymentService {
             where: { id: orderId },
             data: { status: OrderStatus.CONFIRMED },
         });
+
+        // Send payment success notification
+        await this.notificationService.createFromTemplate(
+            userId,
+            'PAYMENT_RECEIVED',
+            {
+                orderNumber: order.orderNumber,
+                amount: order.payment.amount,
+                currency: 'VND'
+            },
+            orderId,
+            'Order'
+        );
+
+        // Send order confirmation email
+        if (order.user && order.user.email) {
+            try {
+                await this.mailService.sendOrderSuccessEmail(
+                    order.user.email,
+                    order.user.username,
+                    order
+                );
+            } catch (emailError) {
+                console.error('Failed to send order confirmation email:', emailError);
+            }
+        }
 
         return updatedPayment;
     }
@@ -160,7 +208,29 @@ export class PaymentService {
                         { id: parseInt(orderIdentifier, 10) || 0 }
                     ]
                 },
-                include: { payment: true },
+                include: {
+                    payment: true,
+                    user: {
+                        select: {
+                            id: true,
+                            email: true,
+                            username: true
+                        }
+                    },
+                    items: {
+                        include: {
+                            product: {
+                                select: {
+                                    id: true,
+                                    title: true,
+                                    slug: true,
+                                    images: true,
+                                }
+                            },
+                            productVariation: true
+                        }
+                    }
+                },
             });
 
             if (!order) {
@@ -197,6 +267,20 @@ export class PaymentService {
                     order.id,
                     'Order'
                 );
+
+                // Send order confirmation email
+                if (order.user && order.user.email) {
+                    try {
+                        await this.mailService.sendOrderSuccessEmail(
+                            order.user.email,
+                            order.user.username,
+                            order
+                        );
+                    } catch (emailError) {
+                        console.error('Failed to send order confirmation email:', emailError);
+                        // Don't throw the error to avoid disrupting the payment process
+                    }
+                }
             } else {
                 // Update payment status to failed
                 await this.prisma.payment.update({
