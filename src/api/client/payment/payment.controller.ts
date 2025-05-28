@@ -51,10 +51,12 @@ export class PaymentController {
         @Body() createPaymentUrlDto: CreatePaymentUrlDto
     ) {
         const { orderId, paymentMethod } = createPaymentUrlDto;
+        const ipAddress = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
         const paymentData = await this.paymentService.createPaymentUrl(
             req.user.userId,
             orderId,
-            paymentMethod
+            paymentMethod,
+            ipAddress
         );
         return ApiResponse.success({
             ...paymentData,
@@ -70,7 +72,6 @@ export class PaymentController {
         @Query() query: any,
         @Body() body: any
     ) {
-        // Combine query and body to process the callback
         const params = { ...query, ...body };
         const result = await this.paymentService.handlePaymentCallback(paymentMethod, params);
         return ApiResponse.success({
@@ -86,8 +87,6 @@ export class PaymentController {
         @Query() query: any,
         @Body() body: any
     ) {
-        // This endpoint is for asynchronous notifications from payment gateways
-        // Some payment gateways like MoMo use a separate notification endpoint
         const params = { ...query, ...body };
         const result = await this.paymentService.handlePaymentCallback(paymentMethod, params);
         return ApiResponse.success({

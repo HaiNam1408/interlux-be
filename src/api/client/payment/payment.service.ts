@@ -33,7 +33,6 @@ export class PaymentService {
             throw new NotFoundException('Payment not found');
         }
 
-        // Check if the payment belongs to the user
         const hasAccess = payment.orders.some((order) => order.userId === userId);
         if (!hasAccess) {
             throw new BadRequestException('You do not have permission to access this payment information');
@@ -84,7 +83,6 @@ export class PaymentService {
             throw new BadRequestException('Cannot update payment information for this order');
         }
 
-        // Update payment information
         const updatedPayment = await this.prisma.payment.update({
             where: { id: order.paymentId },
             data: {
@@ -94,13 +92,11 @@ export class PaymentService {
             },
         });
 
-        // Update order status to CONFIRMED
         await this.prisma.order.update({
             where: { id: orderId },
             data: { status: OrderStatus.CONFIRMED },
         });
 
-        // Send payment success notification
         await this.notificationService.createFromTemplate(
             userId,
             'PAYMENT_RECEIVED',
@@ -113,7 +109,6 @@ export class PaymentService {
             'Order'
         );
 
-        // Send order confirmation email
         if (order.user && order.user.email) {
             try {
                 await this.mailService.sendOrderSuccessEmail(
@@ -129,8 +124,7 @@ export class PaymentService {
         return updatedPayment;
     }
 
-    // Create payment URL for online payment gateways
-    async createPaymentUrl(userId: number, orderId: number, paymentMethod: string) {
+    async createPaymentUrl(userId: number, orderId: number, paymentMethod: string, ipAddress: string) {
         const order = await this.prisma.order.findUnique({
             where: { id: orderId },
             include: {
@@ -153,23 +147,19 @@ export class PaymentService {
             throw new BadRequestException('You do not have permission to create payment URL for this order');
         }
 
-        // Check order status
         if (order.status !== OrderStatus.PENDING) {
             throw new BadRequestException('Cannot create payment URL for this order');
         }
 
         try {
-            // Get the appropriate payment strategy
             const paymentStrategy = this.paymentStrategyFactory.getStrategy(paymentMethod);
 
-            // Update payment method in the database
             await this.prisma.payment.update({
                 where: { id: order.paymentId },
                 data: { method: paymentMethod.toUpperCase() as any }
             });
 
-            // Generate payment URL using the strategy
-            const paymentUrl = await paymentStrategy.generatePaymentUrl(order);
+            const paymentUrl = await paymentStrategy.generatePaymentUrl(order, ipAddress);
 
             return {
                 paymentUrl,
@@ -183,31 +173,19 @@ export class PaymentService {
         }
     }
 
-
-
-    // Handle callback from payment gateway
     async handlePaymentCallback(paymentMethod: string, params: any) {
         try {
-            // Get the appropriate payment strategy
             const paymentStrategy = this.paymentStrategyFactory.getStrategy(paymentMethod);
-
-            // Process the callback using the strategy
             const result = await paymentStrategy.handleCallback(params);
 
-            // Find order based on orderNumber or other identifier in the params
-            const orderIdentifier = params.orderNumber || params.vnp_TxnRef || params.invoice || params.orderId;
+            const orderIdentifier = params.vnp_TxnRef;
 
             if (!orderIdentifier) {
                 throw new BadRequestException('Order identifier not found in callback parameters');
             }
 
             const order = await this.prisma.order.findFirst({
-                where: {
-                    OR: [
-                        { orderNumber: orderIdentifier },
-                        { id: parseInt(orderIdentifier, 10) || 0 }
-                    ]
-                },
+                where: { orderNumber: orderIdentifier },
                 include: {
                     payment: true,
                     user: {
@@ -237,9 +215,7 @@ export class PaymentService {
                 throw new NotFoundException('Order not found');
             }
 
-            // Update payment status based on callback result
             if (result.success) {
-                // Update payment status to successful
                 await this.prisma.payment.update({
                     where: { id: order.paymentId },
                     data: {
@@ -249,13 +225,11 @@ export class PaymentService {
                     },
                 });
 
-                // Update order status
                 await this.prisma.order.update({
                     where: { id: order.id },
                     data: { status: OrderStatus.CONFIRMED },
                 });
 
-                // Send payment success notification
                 await this.notificationService.createFromTemplate(
                     order.userId,
                     'PAYMENT_RECEIVED',
@@ -268,7 +242,6 @@ export class PaymentService {
                     'Order'
                 );
 
-                // Send order confirmation email
                 if (order.user && order.user.email) {
                     try {
                         await this.mailService.sendOrderSuccessEmail(
@@ -278,11 +251,9 @@ export class PaymentService {
                         );
                     } catch (emailError) {
                         console.error('Failed to send order confirmation email:', emailError);
-                        // Don't throw the error to avoid disrupting the payment process
                     }
                 }
             } else {
-                // Update payment status to failed
                 await this.prisma.payment.update({
                     where: { id: order.paymentId },
                     data: {
@@ -292,7 +263,6 @@ export class PaymentService {
                     },
                 });
 
-                // Send payment failed notification
                 await this.notificationService.createFromTemplate(
                     order.userId,
                     'PAYMENT_FAILED',
