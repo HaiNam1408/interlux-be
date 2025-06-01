@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../../prisma.service';
 import { AddToCartDto, UpdateCartItemDto } from './dto';
+import { calculateFinalPrice } from 'src/utils/calculatePrice.util';
 
 @Injectable()
 export class CartService {
@@ -66,6 +67,7 @@ export class CartService {
                         title: item.product?.title,
                         price: item.productVariation.price,
                         percentOff: item.productVariation.percentOff,
+                        finalPrice: calculateFinalPrice(item.productVariation.price, item.productVariation.percentOff),
                         images: item.productVariation.images,
                         attributeValues: item.productVariation.attributeValues,
                     },
@@ -75,6 +77,10 @@ export class CartService {
             
             return {
                 ...item,
+                product: {
+                    ...item.product,
+                    finalPrice: calculateFinalPrice(item.product.price, item.product.percentOff),
+                },
                 productVariation: undefined,
             };
         });
