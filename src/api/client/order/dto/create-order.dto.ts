@@ -14,16 +14,6 @@ export class CreateOrderDto {
     shippingAddress: AddressDto;
 
     @ApiProperty({
-        description: 'Thông tin địa chỉ thanh toán (nếu khác địa chỉ giao hàng)',
-        type: AddressDto,
-        required: false,
-    })
-    @ValidateNested()
-    @Type(() => AddressDto)
-    @IsOptional()
-    billingAddress?: AddressDto;
-
-    @ApiProperty({
         description: 'ID phương thức vận chuyển',
         example: 1,
     })

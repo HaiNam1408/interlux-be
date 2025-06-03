@@ -18,7 +18,6 @@ export class OrderService {
     async createOrder(userId: number, createOrderDto: CreateOrderDto) {
         const {
             shippingAddress,
-            billingAddress,
             shippingId,
             paymentMethod,
             couponCode,
@@ -170,95 +169,99 @@ export class OrderService {
         const total = subtotal + shippingFee - discountAmount;
         const orderNumber = `ORD${Date.now()}${Math.floor(Math.random() * 1000)}`;
 
-        const payment = await this.prisma.payment.create({
-            data: {
-                amount: total,
-                method: paymentMethod as PaymentMethod,
-                status: PaymentStatus.PENDING,
-                currency: 'VND',
-                metadata: {
+        // Transaction block
+        const result = await this.prisma.$transaction(async (tx) => {
+            const payment = await tx.payment.create({
+                data: {
+                    amount: total,
+                    method: paymentMethod as PaymentMethod,
+                    status: PaymentStatus.PENDING,
+                    currency: 'VND',
+                    metadata: {
+                        orderNumber,
+                        userId,
+                        createdAt: new Date(),
+                    },
+                },
+            });
+
+            const order = await tx.order.create({
+                data: {
                     orderNumber,
                     userId,
-                    createdAt: new Date(),
+                    subtotal,
+                    shippingFee,
+                    discount: discountAmount,
+                    total,
+                    paymentId: payment.id,
+                    shippingId,
+                    couponId: coupon?.id,
+                    status: paymentMethod == PaymentMethod.COD ? OrderStatus.CONFIRMED : OrderStatus.PENDING,
+                    note,
+                    shippingAddress: shippingAddress as any,
+                    items: {
+                        create: orderItems,
+                    },
                 },
-            },
-        });
-
-        const order = await this.prisma.order.create({
-            data: {
-                orderNumber,
-                userId,
-                subtotal,
-                shippingFee,
-                discount: discountAmount,
-                total,
-                paymentId: payment.id,
-                shippingId,
-                couponId: coupon?.id,
-                status: paymentMethod == PaymentMethod.COD ? OrderStatus.CONFIRMED : OrderStatus.PENDING,
-                note,
-                shippingAddress: shippingAddress as any,
-                billingAddress: billingAddress as any || shippingAddress as any,
-                items: {
-                    create: orderItems,
+                include: {
+                    user: true,
+                    items: true,
+                    payment: true,
+                    shipping: true,
+                    coupon: true,
                 },
-            },
-            include: {
-                user: true,
-                items: true,
-                payment: true,
-                shipping: true,
-                coupon: true,
-            },
-        });
-
-        if (coupon) {
-            await this.prisma.coupon.update({
-                where: { id: coupon.id },
-                data: { usageCount: { increment: 1 } },
             });
-        }
 
-        for (const item of cart.items || []) {
-            if (item.productVariationId) {
-                await this.prisma.productVariation.update({
-                    where: { id: item.productVariationId },
-                    data: { inventory: { decrement: item.quantity } },
+            if (coupon) {
+                await tx.coupon.update({
+                    where: { id: coupon.id },
+                    data: { usageCount: { increment: 1 } },
                 });
             }
 
-            await this.prisma.product.update({
-                where: { id: item.productId },
-                data: { sold: { increment: item.quantity } },
-            });
-        }
+            for (const item of cart.items || []) {
+                if (item.productVariationId) {
+                    await tx.productVariation.update({
+                        where: { id: item.productVariationId },
+                        data: { inventory: { decrement: item.quantity } },
+                    });
+                }
+
+                await tx.product.update({
+                    where: { id: item.productId },
+                    data: { sold: { increment: item.quantity } },
+                });
+            }
+
+            return order;
+        });
 
         await this.cartService.clearCart(userId);
         await this.notificationService.createFromTemplate(
             userId,
             'ORDER_CREATED',
             {
-                orderNumber: order.orderNumber,
-                total: order.total,
+                orderNumber: result.orderNumber,
+                total: result.total,
                 currency: 'VND'
             },
-            order.id,
+            result.id,
             'Order'
         );
 
         if (paymentMethod == PaymentMethod.COD) {
             try {
                 await this.mailService.sendOrderSuccessEmail(
-                    order.user.email,
-                    order.user.username,
-                    order
+                    result.user.email,
+                    result.user.username,
+                    result
                 );
             } catch (emailError) {
                 console.error('Failed to send order confirmation email:', emailError);
             }
         }
 
-        return order;
+        return result;
     }
 
     async getOrders(userId: number) {
