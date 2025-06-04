@@ -4,19 +4,16 @@ import {
     Param,
     Query,
     HttpStatus,
-    UseInterceptors,
     ParseIntPipe,
 } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import ApiResponse from 'src/global/api.response';
 import { resError } from 'src/global/handleError.global';
-import { CacheInterceptor } from '@nestjs/cache-manager';
 import { ProductClientService } from './product.service';
 import { FindAllProductsClientDto } from './dto';
 
 @ApiTags('Client - Product')
 @Controller('product')
-@UseInterceptors(CacheInterceptor)
 export class ProductClientController {
     constructor(private readonly productClientService: ProductClientService) { }
 
