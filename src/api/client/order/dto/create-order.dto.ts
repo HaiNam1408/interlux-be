@@ -23,7 +23,7 @@ export class CreateOrderDto {
 
     @ApiProperty({
         description: 'Phương thức thanh toán',
-        example: 'BANK_TRANSFER',
+        example: 'COD',
     })
     @IsString()
     @IsNotEmpty()

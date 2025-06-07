@@ -8,6 +8,7 @@ import {
     Request,
     Query,
     All,
+    Response,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { PaymentService } from './payment.service';
@@ -68,27 +69,17 @@ export class PaymentController {
     @All('callback/:paymentMethod')
     @ApiOperation({ summary: 'Payment gateway callback' })
     async paymentCallback(
+        @Response() res,
         @Param('paymentMethod') paymentMethod: string,
         @Query() query: any,
         @Body() body: any
     ) {
         const params = { ...query, ...body };
         const result = await this.paymentService.handlePaymentCallback(paymentMethod, params);
-        return ApiResponse.success({
-            ...result,
-        });
-    }
-
-    @Public()
-    @All('notify/:paymentMethod')
-    @ApiOperation({ summary: 'Payment gateway notification webhook' })
-    async paymentNotification(
-        @Param('paymentMethod') paymentMethod: string,
-        @Query() query: any,
-        @Body() body: any
-    ) {
-        const params = { ...query, ...body };
-        const result = await this.paymentService.handlePaymentCallback(paymentMethod, params);
+        if(result.success) {
+            return res.redirect(`${process.env.CLIENT_URL}/checkout/complete`);
+        }
+        
         return ApiResponse.success({
             ...result,
         });

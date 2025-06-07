@@ -7,8 +7,6 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import {
   PaymentStrategyFactory,
   VNPayStrategy,
-  MomoStrategy,
-  PayPalStrategy,
 } from './strategies';
 import { NotificationModule } from 'src/services/notification/notification.module';
 import { NotificationService } from 'src/services/notification';
@@ -24,8 +22,6 @@ import { MailService } from 'src/services/mail/mail.service';
     ConfigService,
     PaymentStrategyFactory,
     VNPayStrategy,
-    MomoStrategy,
-    PayPalStrategy,
     NotificationService,
     MailService
   ],
