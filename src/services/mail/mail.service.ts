@@ -76,7 +76,7 @@ export class MailService {
     const formatCurrency = (amount: number) => {
       return new Intl.NumberFormat('en-US', {
         style: 'currency',
-        currency: 'VND',
+        currency: 'USD',
         minimumFractionDigits: 0,
       }).format(amount);
     };

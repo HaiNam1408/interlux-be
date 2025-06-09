@@ -16,7 +16,7 @@ export class VNPayStrategy implements PaymentStrategy {
     const vnpHashSecret = this.configService.get<string>('VNPAY_HASH_SECRET');
     const vnpUrl = this.configService.get<string>('VNPAY_URL');
     const returnUrl = this.configService.get<string>('API_URL') + '/api/v1/client/payment/callback/vnpay';
-
+    const exchangeRate = 26020;
     let date = new Date();
     let createDate = moment(date).format('YYYYMMDDHHmmss');
 
@@ -29,7 +29,7 @@ export class VNPayStrategy implements PaymentStrategy {
       vnp_TxnRef: order.orderNumber,
       vnp_OrderInfo: `Payment for order ${order.orderNumber}`,
       vnp_OrderType: 'other',
-      vnp_Amount: order.total * 100,
+      vnp_Amount: order.total * exchangeRate * 100,
       vnp_ReturnUrl: returnUrl,
       vnp_IpAddr: ipAddress ?? '127.0.0.1',
       vnp_CreateDate: createDate,
