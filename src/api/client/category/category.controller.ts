@@ -2,20 +2,15 @@ import {
     Controller,
     Get,
     Param,
-    Query,
     HttpStatus,
-    UseInterceptors,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import ApiResponse from 'src/global/api.response';
 import { resError } from 'src/global/handleError.global';
-import { CacheInterceptor } from '@nestjs/cache-manager';
 import { CategoryClientService } from './category.service';
-import { FindCategoriesClientDto } from './dto';
 
 @ApiTags('Client - Category')
 @Controller('category')
-@UseInterceptors(CacheInterceptor)
 export class CategoryClientController {
     constructor(private readonly categoryClientService: CategoryClientService) { }
 

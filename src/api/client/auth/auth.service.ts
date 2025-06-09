@@ -116,7 +116,7 @@ export class AuthService {
         const data = {
             error,
             name: userData?.username || 'User',
-            loginLink: `${process.env.CLIENT_URL}/login`
+            loginLink: `${process.env.CLIENT_URL}/my-account`
         };
         const html = await renderTemplate('register-response.ejs', data);
 
@@ -254,7 +254,8 @@ export class AuthService {
             );
 
             const html = await renderTemplate('reset-password.ejs', {
-                success: 'Password reset successfully, you can now log in with your new password.'
+                success: 'Password reset successfully, you can now log in with your new password.',
+                loginLink: `${process.env.CLIENT_URL}/my-account`
             });
 
             return html;

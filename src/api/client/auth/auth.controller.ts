@@ -54,7 +54,7 @@ export class AuthController {
             const data = {
                 error: 'Internal Server Error. Please try again later.',
                 name: 'Guest',
-                loginLink: `${process.env.CLIENT_URL}/login`
+                loginLink: `${process.env.CLIENT_URL}/my-account`
             };
 
             const html = await renderTemplate('register-response.ejs', data);
