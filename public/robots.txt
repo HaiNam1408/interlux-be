@@ -1,0 +1,39 @@
+# robots.txt for Interlux Backend API
+# This is a backend API - most endpoints should not be crawled
+
+# Default rule for all robots
+User-agent: *
+
+# Disallow all admin endpoints
+Disallow: /api/admin/
+
+# Disallow authentication endpoints
+Disallow: /api/client/auth/
+Disallow: /api/admin/auth/
+
+# Disallow cart and order endpoints (user-specific data)
+Disallow: /api/client/cart/
+Disallow: /api/client/order/
+Disallow: /api/admin/order/
+
+# Disallow payment endpoints
+Disallow: /api/client/payment/
+
+# Disallow customer data
+Disallow: /api/admin/customer/
+
+# Disallow notification endpoints
+Disallow: /api/client/notification/
+
+# Allow public product and category endpoints for SEO
+Allow: /api/client/product/
+Allow: /api/client/category/
+
+# Allow coupon validation (public-facing)
+Allow: /api/client/coupon/validate
+
+# Crawl delay to avoid overloading the API
+Crawl-delay: 10
+
+# Sitemap location (add your sitemap if available)
+# Sitemap: https://yourdomain.com/sitemap.xml

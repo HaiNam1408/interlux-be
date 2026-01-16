@@ -6,8 +6,12 @@
     "deleteOutDir": true,
     "assets": [
       {
-        "include": "../views",
+        "include": "../views/**/*",
         "outDir": "dist/views",
+        "watchAssets": true
+      },
+      {
+        "include": "**/*.ejs",
         "watchAssets": true
       }
     ]

@@ -65,6 +65,65 @@ $ npm run start:dev
 $ npm run start:prod
 ```
 
+## Deploy to Vercel
+
+### Build Settings (Vercel Dashboard):
+
+**Install Command:**
+```bash
+npm install
+```
+
+**Build Command:**
+```bash
+npx prisma generate && npm run build
+```
+
+**Output Directory:**
+```
+dist
+```
+
+### Environment Variables:
+Add all variables from `.env.example` to Vercel:
+- `DATABASE_URL` - PostgreSQL connection (use Supabase/Neon/Railway)
+- `PORT` - Port number (default: 3000)
+- `JWT_SECRET` - JWT secret key
+- `EXPIRES_ACCESS_TOKEN` - Access token expiration
+- `JWT_REFRESH_SECRET` - Refresh token secret
+- `EXPIRES_REFRESH_TOKEN` - Refresh token expiration
+- `CLIENT_URL` - Frontend URL
+- `REDIS_HOST` - Redis host (use Upstash Redis)
+- `REDIS_PORT` - Redis port
+- `EMAIL_USER` - SMTP email
+- `EMAIL_PASS` - SMTP password
+- `API_URL` - Backend API URL
+
+### Pre-deployment:
+1. **Run database migrations on production database:**
+   ```bash
+   DATABASE_URL="your_production_db_url" npx prisma migrate deploy
+   ```
+
+2. **Seed data (optional):**
+   ```bash
+   DATABASE_URL="your_production_db_url" npm run seed
+   ```
+
+3. **Commit and push all changes:**
+   ```bash
+   git add .
+   git commit -m "Ready for production"
+   git push
+   ```
+
+### Important Notes:
+- ✅ `vercel.json` is configured for NestJS
+- ✅ Views templates are auto-copied during build
+- ✅ Template paths work in both dev and production
+- ⚠️ Use external PostgreSQL (Vercel doesn't support local DB)
+- ⚠️ Use Upstash Redis for serverless Redis
+
 ## Test
 
 ```bash
