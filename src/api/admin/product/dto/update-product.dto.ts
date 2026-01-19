@@ -122,4 +122,20 @@ export class UpdateProductDto {
         maxItems: 6
     })
     images?: any[];
+
+    @ApiProperty({
+        required: false,
+        description: "3D model file (supports .glb or .gltf format)",
+        type: String,
+        format: "binary"
+    })
+    model3d?: any;
+
+    @ApiProperty({
+        required: false,
+        description: "Set to true to remove the current 3D model",
+        type: Boolean,
+        default: false
+    })
+    removeModel?: boolean;
 }

@@ -3,7 +3,7 @@ import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { FilesService } from 'src/services/file/file.service';
 import { PrismaService } from 'src/prisma.service';
-import { Product, ProductStatus, CommonStatus } from '@prisma/client';
+import { ProductStatus, CommonStatus } from '@prisma/client';
 import { SlugUtil } from 'src/utils/createSlug.util';
 import { PaginationService } from 'src/utils/pagination.util';
 import { TableName } from 'src/common/enums/table.enum';
@@ -19,6 +19,7 @@ export class ProductService {
     async create(
         createProductDto: CreateProductDto,
         images: Express.Multer.File[],
+        model3dFile?: Express.Multer.File,
     ): Promise<any> {
         const category = await this.prisma.category.findFirst({
             where: { id: createProductDto.categoryId },
@@ -51,6 +52,21 @@ export class ProductService {
             );
         }
 
+        // Upload 3D model if provided
+        let modelData = null;
+        if (model3dFile) {
+            try {
+                modelData = await this.filesService.upload3DFile(
+                    model3dFile.buffer,
+                    model3dFile.originalname,
+                    'product/models'
+                );
+            } catch (error) {
+                console.error('Error uploading 3D model:', error);
+                throw new Error(`Failed to upload 3D model: ${error.message}`);
+            }
+        }
+
         const attributes = typeof createProductDto.attributes === 'string'
             ? JSON.parse(createProductDto.attributes as string)
             : createProductDto.attributes;
@@ -65,6 +81,7 @@ export class ProductService {
                 attributes: attributes,
                 categoryId: createProductDto.categoryId,
                 images: uploadedImages,
+                model: modelData,
                 sort: createProductDto.sort,
                 status: createProductDto.status || ProductStatus.DRAFT,
             }
@@ -199,7 +216,6 @@ export class ProductService {
             throw new HttpException('Product not found', 404);
         }
 
-        // Chuyển đổi dữ liệu để response gọn gàng hơn
         return this.transformProductDetail(product);
     }
 
@@ -207,6 +223,7 @@ export class ProductService {
         id: number,
         updateProductDto: UpdateProductDto,
         newImages?: Express.Multer.File[],
+        model3dFile?: Express.Multer.File,
     ) {
         const product = await this.prisma.product.findUnique({
             where: { id, status: { not: ProductStatus.INACTIVE } },
@@ -281,9 +298,7 @@ export class ProductService {
                     console.error('Error while deleting product images during update:', error);
                 }
             }
-
         }
-
 
         if (newImages && newImages.length > 0) {
             const uploadedImages = await Promise.all(
@@ -300,6 +315,54 @@ export class ProductService {
             currentImages = [...currentImages, ...uploadedImages];
         }
 
+        // Handle 3D model update
+        let modelData = undefined;
+        if (updateProductDto.removeModel) {
+            if (product.model) {
+                const currentModel = typeof product.model === 'string'
+                    ? JSON.parse(product.model as string)
+                    : product.model as any;
+
+                if (currentModel && currentModel.fileName) {
+                    try {
+                        await this.filesService.deletePublicFile(currentModel.fileName);
+                    } catch (error) {
+                        console.error(`Failed to delete 3D model file ${currentModel.fileName}:`, error);
+                    }
+                }
+            }
+            modelData = null;
+        }
+        // If a new model is uploaded, replace the existing one
+        else if (model3dFile) {
+            // Delete existing model if there is one
+            if (product.model) {
+                const currentModel = typeof product.model === 'string'
+                    ? JSON.parse(product.model as string)
+                    : product.model as any;
+
+                if (currentModel && currentModel.fileName) {
+                    try {
+                        await this.filesService.deletePublicFile(currentModel.fileName);
+                    } catch (error) {
+                        console.error(`Failed to delete old 3D model file ${currentModel.fileName}:`, error);
+                    }
+                }
+            }
+
+            // Upload new model
+            try {
+                modelData = await this.filesService.upload3DFile(
+                    model3dFile.buffer,
+                    model3dFile.originalname,
+                    'product/models'
+                );
+            } catch (error) {
+                console.error('Error uploading 3D model:', error);
+                throw new Error(`Failed to upload 3D model: ${error.message}`);
+            }
+        }
+
         let attributes = undefined;
         if (updateProductDto.attributes !== undefined) {
             attributes = typeof updateProductDto.attributes === 'string'
@@ -307,20 +370,27 @@ export class ProductService {
                 : updateProductDto.attributes;
         }
 
+        const updateData: any = {
+            title: updateProductDto.title !== undefined ? updateProductDto.title : undefined,
+            slug: newSlug !== product.slug ? newSlug : undefined,
+            description: updateProductDto.description !== undefined ? updateProductDto.description : undefined,
+            price: updateProductDto.price !== undefined ? updateProductDto.price : undefined,
+            percentOff: updateProductDto.percentOff !== undefined ? updateProductDto.percentOff : undefined,
+            attributes: attributes,
+            categoryId: updateProductDto.categoryId !== undefined ? updateProductDto.categoryId : undefined,
+            sort: updateProductDto.sort !== undefined ? updateProductDto.sort : undefined,
+            status: updateProductDto.status !== undefined ? updateProductDto.status : undefined,
+            images: currentImages,
+        };
+
+        // Only include model in update if it's been changed
+        if (modelData !== undefined) {
+            updateData.model = modelData;
+        }
+
         const updatedProduct = await this.prisma.product.update({
             where: { id },
-            data: {
-                title: updateProductDto.title !== undefined ? updateProductDto.title : undefined,
-                slug: newSlug !== product.slug ? newSlug : undefined,
-                description: updateProductDto.description !== undefined ? updateProductDto.description : undefined,
-                price: updateProductDto.price !== undefined ? updateProductDto.price : undefined,
-                percentOff: updateProductDto.percentOff !== undefined ? updateProductDto.percentOff : undefined,
-                attributes: attributes,
-                categoryId: updateProductDto.categoryId !== undefined ? updateProductDto.categoryId : undefined,
-                sort: updateProductDto.sort !== undefined ? updateProductDto.sort : undefined,
-                status: updateProductDto.status !== undefined ? updateProductDto.status : undefined,
-                images: currentImages,
-            },
+            data: updateData,
         });
 
         return updatedProduct;
@@ -355,6 +425,39 @@ export class ProductService {
         }
 
         await this.prisma.$transaction(async (prisma) => {
+            if (product.model) {
+                const modelData = typeof product.model === 'string'
+                    ? JSON.parse(product.model as string)
+                    : product.model as any;
+
+                if (modelData && modelData.fileName) {
+                    try {
+                        await this.filesService.deletePublicFile(modelData.fileName);
+                    } catch (error) {
+                        console.error(`Failed to delete 3D model file ${modelData.fileName}:`, error);
+                    }
+                }
+            }
+
+            // Delete product images
+            if (product.images) {
+                const imagesData = typeof product.images === 'string'
+                    ? JSON.parse(product.images as string)
+                    : product.images as any[];
+
+                if (imagesData && imagesData.length > 0) {
+                    for (const image of imagesData) {
+                        if (image && image.fileName) {
+                            try {
+                                await this.filesService.deletePublicFile(image.fileName);
+                            } catch (error) {
+                                console.error(`Failed to delete image file ${image.fileName}:`, error);
+                            }
+                        }
+                    }
+                }
+            }
+
             if (product.variations && product.variations.length > 0) {
                 for (const variation of product.variations) {
                     await prisma.productVariation.update({
@@ -385,7 +488,8 @@ export class ProductService {
                 where: { id },
                 data: {
                     status: ProductStatus.INACTIVE,
-                    attributes: updatedAttributes
+                    attributes: updatedAttributes,
+                    model: null
                 }
             });
         });
@@ -393,38 +497,38 @@ export class ProductService {
 
     // Helper method để chuyển đổi dữ liệu sản phẩm chi tiết
     private transformProductDetail(product: any): any {
-        // Đảm bảo images là object
         if (product.images) {
             product.images = typeof product.images === 'string'
                 ? JSON.parse(product.images as string)
                 : product.images;
         }
 
-        // Đảm bảo attributes là object
+        if (product.model) {
+            product.model = typeof product.model === 'string'
+                ? JSON.parse(product.model as string)
+                : product.model;
+        }
+
         if (product.attributes) {
             product.attributes = typeof product.attributes === 'string'
                 ? JSON.parse(product.attributes as string)
                 : product.attributes;
         }
 
-        // Tính giá cuối cùng sau khi giảm giá
         if (product.percentOff && product.percentOff > 0) {
             product.finalPrice = product.price * (1 - product.percentOff / 100);
         } else {
             product.finalPrice = product.price;
         }
 
-        // Chuyển đổi variations để dễ sử dụng hơn
         if (product.variations) {
             product.variations = product.variations.map(variation => {
-                // Đảm bảo images là object
                 if (variation.images) {
                     variation.images = typeof variation.images === 'string'
                         ? JSON.parse(variation.images as string)
                         : variation.images;
                 }
 
-                // Nhóm các thuộc tính theo attribute
                 const groupedAttributes = {};
 
                 if (variation.attributeValues) {
@@ -449,7 +553,6 @@ export class ProductService {
                     });
                 }
 
-                // Tính giá cuối cùng sau khi giảm giá
                 let finalPrice = variation.price;
                 if (variation.percentOff && variation.percentOff > 0) {
                     finalPrice = variation.price * (1 - variation.percentOff / 100);
