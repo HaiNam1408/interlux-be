@@ -7,6 +7,7 @@ import {
     Param,
     Delete,
     UploadedFiles,
+    UploadedFile,
     Query,
     UseInterceptors,
     ParseIntPipe,
@@ -20,7 +21,7 @@ import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { FindAllProductsDto } from './dto/find-all-products.dto';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { FilesInterceptor } from '@nestjs/platform-express';
+import { AnyFilesInterceptor, FileInterceptor, FilesInterceptor } from '@nestjs/platform-express';
 import { UpdateProductStatusDto } from './dto/update-product-status.dto';
 import ApiResponse from 'src/global/api.response';
 import { resError } from 'src/global/handleError.global';
@@ -46,20 +47,23 @@ export class ProductController {
         description: "Create Product",
         type: CreateProductDto,
     })
-    @UseInterceptors(FilesInterceptor("images", 6))
     @Post()
+    @UseInterceptors(AnyFilesInterceptor())
     async create(
         @Body() createProductDto: CreateProductDto,
-        @UploadedFiles() product_images: Express.Multer.File[],
+        @UploadedFiles() files: Express.Multer.File[],
     ): Promise<ApiResponse<any>> {
         try {
-            if (!product_images || product_images.length === 0) {
+            const images = files.filter(file => file.fieldname === 'images');
+            const model3d = files.find(file => file.fieldname === 'model3d');
+            if (!images || images.length === 0) {
                 throw new HttpException('Images are required!', HttpStatus.BAD_REQUEST);
             }
 
             const result = await this.productService.create(
                 createProductDto,
-                product_images,
+                images,
+                model3d,
             );
 
             return new ApiResponse<{}>(
@@ -68,7 +72,7 @@ export class ProductController {
                 result,
             );
         } catch (error) {
-            resError(error);
+            return resError(error);
         }
     }
 
@@ -123,18 +127,22 @@ export class ProductController {
         type: UpdateProductDto,
         required: false,
     })
-    @UseInterceptors(FilesInterceptor("images", 6))
+    @UseInterceptors(AnyFilesInterceptor())
     @Put(':id')
     async update(
         @Param('id', ParseIntPipe) id: number,
         @Body() updateProductDto: UpdateProductDto,
-        @UploadedFiles() images?: Express.Multer.File[],
+        @UploadedFiles() files: Express.Multer.File[],
     ): Promise<ApiResponse<any>> {
         try {
+            const images = files.filter(file => file.fieldname === 'images');
+            const model3d = files.find(file => file.fieldname === 'model3d');
+            
             const result = await this.productService.update(
                 id,
                 updateProductDto,
-                images
+                images,
+                model3d
             );
 
             return new ApiResponse(
@@ -143,7 +151,7 @@ export class ProductController {
                 result,
             );
         } catch (error) {
-            resError(error);
+            return resError(error);
         }
     }
 
